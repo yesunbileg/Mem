@@ -81,8 +81,8 @@ def _build(store, docs):
                 "mem://event/" + e["id"],
                 "L1",
                 e["topic_ids"],
-                expand_for_index(e["summary"], meanings),
-                expand_for_index(e["details"], meanings),
+                e["summary"],
+                expand_for_index(e["summary"] + "\n" + e["details"], meanings),
                 dict(
                     source_etag=digest(json.dumps(e, sort_keys=True).encode()),
                     record_status="corrected"
