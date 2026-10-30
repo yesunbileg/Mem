@@ -1,3 +1,4 @@
+from contextlib import closing
 import json,sqlite3,tempfile,os,unicodedata
 from .documents import load_documents,digest
 from .events import read_event_chain,event_data
@@ -46,7 +47,7 @@ def ensure_index_current(store):
         stamp=None
         try:
             if path.exists():
-                with sqlite3.connect(path) as db:stamp=db.execute('SELECT stamp FROM metadata').fetchone()[0]
+                with closing(sqlite3.connect(path)) as db:stamp=db.execute('SELECT stamp FROM metadata').fetchone()[0]
         except (sqlite3.DatabaseError,TypeError):pass
         if stamp!=source_stamp(store,docs):return _build(store,docs)
         return IndexReport(documents=len(docs),events=store.db.execute('SELECT count(*) FROM events').fetchone()[0],source_revision=source_revision(store))

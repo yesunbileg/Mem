@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from .models import HealthReport
 from .documents import load_documents
 from .index import source_revision,source_stamp,_path
@@ -17,13 +18,18 @@ def get_health(store,deep=False):
         try:
             path=_path(store)
             if path.exists():
-                with sqlite3.connect(path) as db:
+                with closing(sqlite3.connect(path)) as db:
                     stamp=db.execute('SELECT stamp FROM metadata').fetchone()[0]
                     import json
                     revision=json.loads(stamp)['revision']
                     if stamp!=source_stamp(store,docs):issues.append(dict(code='INDEX_STALE',severity='warning'))
             else:issues.append(dict(code='INDEX_MISSING',severity='warning'))
         except (sqlite3.DatabaseError,MemoryError,ValueError,TypeError,KeyError):issues.append(dict(code='INDEX_INVALID',severity='warning'))
+        if deep:
+            from .archive import read_archived_source
+            for row in store.db.execute('SELECT DISTINCT archive_ref FROM processed_sources'):
+                try:read_archived_source(store,row[0])
+                except (MemoryError,OSError):issues.append(dict(code='ARCHIVE_INVALID',severity='error',path=row[0]))
         if pending:issues.append(dict(code='PENDING_OPERATION',severity='warning'))
         for op in store.db.execute("SELECT id FROM operations WHERE state='PREPARED'"):
             issues.append(dict(code='RECOVERY_REQUIRED',severity='error',operation_id=op[0]))

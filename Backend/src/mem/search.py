@@ -1,3 +1,4 @@
+from contextlib import closing
 import re,unicodedata,json,sqlite3
 from .index import ensure_index_current,_path
 from .models import SearchPage,SearchHit
@@ -10,7 +11,7 @@ def search_memory(store,request):
         if not tokens:raise MemoryError('VALIDATION_ERROR','Query needs at least one word')
         query=' AND '.join('"'+token+'"' for token in tokens)
         items=[]
-        with sqlite3.connect(_path(store)) as db:
+        with closing(sqlite3.connect(_path(store))) as db:
             rows=db.execute("SELECT records.ref,records.layer,records.topics,records.data,fts.title,snippet(fts,2,'[',']','…',24),bm25(fts) FROM fts JOIN records ON fts.ref=records.ref WHERE fts MATCH ? ORDER BY bm25(fts),records.ref",(query,)).fetchall()
         for ref,layer,topics,data,title,snippet,score in rows:
             topics=json.loads(topics)
