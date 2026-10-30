@@ -2,7 +2,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 class Model(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='forbid',hide_input_in_errors=True)
 
 class TopicChange(Model):
     action: Literal['create','rename'] = 'create'
