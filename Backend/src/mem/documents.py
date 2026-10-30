@@ -146,41 +146,20 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
 
 
 def load_documents(store, *, tolerate_invalid=False, include_issues=False):
-    """Load canonical documents, optionally isolating bad files instead of failing globally.
+    """Compatibility adapter backed by the same duplicate-safe document catalog."""
+    from .catalog import load_catalog
 
-    Invalid files remain untouched on disk. Callers can inspect issues and avoid
-    publishing a backup until those files have been repaired.
-    """
-    known = {r[0] for r in store.db.execute("SELECT id FROM topics")}
-    docs = []
-    seen = set()
-    issues = []
-    for layer in ("L3", "L2"):
-        for path in sorted((store.root / layer).rglob("*.md")):
-            rel = path.relative_to(store.root).as_posix()
-            try:
-                safe = resolve_safe_path(store.root, rel, layer)
-                doc = parse_document(safe.read_bytes(), rel, known)
-                if doc.document_id in seen:
-                    raise MemoryError(
-                        "INDEX_INVALID", "Duplicate document ID", {"path": rel}
-                    )
-                seen.add(doc.document_id)
-                docs.append(doc)
-            except (MemoryError, OSError) as exc:
-                if not tolerate_invalid:
-                    raise
-                issues.append(
-                    dict(
-                        code=getattr(exc, "code", "IO_ERROR"),
-                        severity="error",
-                        path=rel,
-                        message=getattr(exc, "message", "Unable to read document"),
-                    )
-                )
+    catalog = load_catalog(store)
+    if catalog.issues and not tolerate_invalid:
+        raise MemoryError(
+            "INDEX_INVALID",
+            "Invalid canonical document catalog",
+            {"issues": catalog.issues},
+        )
+    documents = sorted(catalog.documents.values(), key=lambda d: d.path)
     if include_issues:
-        return docs, issues
-    return docs
+        return documents, catalog.issues
+    return documents
 
 
 def render_document(ident, layer, topic_ids, title, body, linked_document_ids=None):
