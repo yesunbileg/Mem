@@ -7,8 +7,8 @@ Backend/.state/
 L0/Inbox/**
 !L0/Inbox/.gitkeep
 L0/Archive/**/*.zip
-L3/*.sqlite3*
-!L3/history.snapshot.sqlite3
+L1/*.sqlite3*
+!L1/history.snapshot.sqlite3
 
 Backend/dist/
 .ruff_cache/

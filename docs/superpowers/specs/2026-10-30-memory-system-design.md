@@ -12,12 +12,12 @@ AI өмнөх ажил, хэрэглэгчийн нөхцөл, зорилго, �
 
 ### Хэрэглэгчийн өгсөн чиглэл
 
-- L1/L2: Markdown (маркдаун), шууд уншиж/засварлаж болох үндсэн эх.
-- L3: SQLite (эс-кью-лайт) үндсэн database (дэйтабэйс); MCP (эм-си-пи)-ээр хайх, унших, бичлэг болон засварын тайлбар нэмэх.
-- Нэгдсэн индекс: L1/L2 **болон L3 database**-аас дахин үүсэх cache (кэш).
+- L3/L2: Markdown (маркдаун), шууд уншиж/засварлаж болох үндсэн эх.
+- L1: SQLite (эс-кью-лайт) үндсэн database (дэйтабэйс); MCP (эм-си-пи)-ээр хайх, унших, бичлэг болон засварын тайлбар нэмэх.
+- Нэгдсэн индекс: L3/L2 **болон L1 database**-аас дахин үүсэх cache (кэш).
 - Эхний хувилбар: нэг компьютер. Obsidian (обсидиан) хэрэглэх боломжтой, түүнээс систем хамаарахгүй.
 - AI хэрэгтэй үед санах ойг ашиглах бүрдээ тусгай зөвшөөрөл асуухгүй. Гэхдээ ард байнга Inbox ажиглаж, өөрөө шинэ memory (мэмори) үүсгэхгүй. “Байнга ажиллана” гэсэн сонголтыг дагалдах тайлбараар нь ингэж тодруулсан.
-- L3 бол бодит болсон, чухал, хэрэглэгч/төслийн онцлог түүх. Энгийн асуулт, AI-ийн хэрэгжээгүй санал, интернэтээс хуулсан ерөнхий мэдээлэл биш.
+- L1 бол бодит болсон, чухал, хэрэглэгч/төслийн онцлог түүх. Энгийн асуулт, AI-ийн хэрэгжээгүй санал, интернэтээс хуулсан ерөнхий мэдээлэл биш.
 - 2026-10-30: хэрэглэгч төлөвлөгөөний дагуу main дээр хэрэгжүүлэлт эхлүүлэхийг хүссэн. Remote push энэ хүсэлтэд ороогүй.
 
 ### Энэ хувилбарт санал болгосон сонголтууд
@@ -28,7 +28,7 @@ Python 3.12+, албан ёсны Python MCP SDK, stdio (стүдио) холб�
 
 ## 2. Хамрах хүрээ
 
-Амжилт гэдэг нь AI одоогийн нөхцөлийг L1/L2-оос ойлгож, өмнөх бодит үр дүнг L3-аас эх сурвалжтай олж, шинэчлэлтийг давхардуулахгүй хадгалж, архивлаад, тасалдлын дараа сэргээж чаддаг болохыг хэлнэ.
+Амжилт гэдэг нь AI одоогийн нөхцөлийг L3/L2-оос ойлгож, өмнөх бодит үр дүнг L1-аас эх сурвалжтай олж, шинэчлэлтийг давхардуулахгүй хадгалж, архивлаад, тасалдлын дараа сэргээж чаддаг болохыг хэлнэ.
 
 Эхний хувилбарт тусгай UI, embeddings/vector search, cloud sync, олон компьютерийн merge, scheduler, Inbox watcher, автоматаар гаднын сервисээс мэдээлэл татах ажиллагаа орохгүй. Client MCP серверийг session-ийн турш нээлттэй байлгаж болно; сервер зөвхөн хүсэлт ирэхэд ажил хийнэ.
 
@@ -40,7 +40,7 @@ Python 3.12+, албан ёсны Python MCP SDK, stdio (стүдио) холб�
 |---|---|---|
 | Markdown + SQLite руу дараалан шууд бичих | Анхны код бага | Дундаа тасарвал хэсэгчилсэн төлөв үлдэнэ. Зөвхөн throwaway туршилтад тохиромжтой. |
 | Markdown + SQLite + durable operation journal | Хэрэглэгчийн хадгалалтын сонголтыг дагана; retry/recovery тодорхой | Бичилтийн урсгал илүү нарийн. **Энэ төлөвлөгөөний санал болгосон сонголт.** |
-| Бүгдийг SQLite-д хадгалаад Markdown export хийх | Нэг database transaction хялбар | L1/L2 үндсэн Markdown, шууд засварлах шаардлагыг өөрчилнө. Одоогийн чиглэлд тохирохгүй. |
+| Бүгдийг SQLite-д хадгалаад Markdown export хийх | Нэг database transaction хялбар | L3/L2 үндсэн Markdown, шууд засварлах шаардлагыг өөрчилнө. Одоогийн чиглэлд тохирохгүй. |
 
 Хэрэглэгч төлөвлөгөөний дагуу эхлүүлэхийг зөвшөөрсөн; хэрэгжүүлэлтийн нотолгоогоор энэ загварыг шинэчилнэ.
 
@@ -50,17 +50,17 @@ Python 3.12+, албан ёсны Python MCP SDK, stdio (стүдио) холб�
 |---|---|---|
 | L0 Inbox | Оруулсан эхийн bytes-ийг 1:1, боловсруулаагүй харилцан яриа/өгөгдөл | Чимээгүй өөрчилсөн, дутуу эх |
 | L0 Archive | Боловсруулсан эх, hash, холбоос, үр дүнтэй immutable ZIP | Нэг хуучин ZIP-ийг байнга дахин бичих |
-| L1 | Товч одоогийн зураг: device, OS, app, project, ерөнхий зорилго, хэрэглэгч өөрөө өгсөн чухал нөхцөл | Дэлгэрэнгүй log, үндэслэлгүй эрүүл мэнд/зан төлөвийн дүгнэлт |
+| L3 | Товч одоогийн зураг: device, OS, app, project, ерөнхий зорилго, хэрэглэгч өөрөө өгсөн чухал нөхцөл | Дэлгэрэнгүй log, үндэслэлгүй эрүүл мэнд/зан төлөвийн дүгнэлт |
 | L2 | Topic/project тус бүрийн зорилго, хүссэн үр дүн, constraints, шийдвэр, мэдсэн зүйл, дараагийн алхам, agent анхаарах зүйл | Харилцан яриаг бүхэлд нь хуулсан текст |
-| L3 | Бодит үйлдэл, үр дүн, тестийн дүн, хэрэгжсэн өөрчлөлт, бодитоор гаргасан чухал шийдвэр; correction холбоостой | Зүгээр асуусан асуулт, хэрэгжээгүй AI санал, ерөнхий интернэт мэдлэг |
+| L1 | Бодит үйлдэл, үр дүн, тестийн дүн, хэрэгжсэн өөрчлөлт, бодитоор гаргасан чухал шийдвэр; correction холбоостой | Зүгээр асуусан асуулт, хэрэгжээгүй AI санал, ерөнхий интернэт мэдлэг |
 
-“Интернэтээс олдохгүй” гэдгийг хувийн нөхцөл, тухайн төсөл дээр яг юу болсон гэдгээр ойлгоно. Нийтэд мэдэгддэг аргыг энэ төсөл дээр хэрэглэсэн бодит үр дүн L3-д орж болно.
+“Интернэтээс олдохгүй” гэдгийг хувийн нөхцөл, тухайн төсөл дээр яг юу болсон гэдгээр ойлгоно. Нийтэд мэдэгддэг аргыг энэ төсөл дээр хэрэглэсэн бодит үр дүн L1-д орж болно.
 
-Үнэн эсэх ба ач холбогдлыг код дангаараа батлахгүй. Agent сонгоно; код required metadata, эх сурвалж, формат, холбоос, idempotency, хувилбарын зөрчлийг шалгана. L3 evidence нь `user_reported` эсвэл `tool_observed`; user хэлснийг өөрөө шалгасан мэт бичихгүй. `occurred_at` тодорхойгүй бол `null`, `recorded_at`-ыг backend UTC-ээр өгнө. Эдгээрийг андуурахгүй.
+Үнэн эсэх ба ач холбогдлыг код дангаараа батлахгүй. Agent сонгоно; код required metadata, эх сурвалж, формат, холбоос, idempotency, хувилбарын зөрчлийг шалгана. L1 evidence нь `user_reported` эсвэл `tool_observed`; user хэлснийг өөрөө шалгасан мэт бичихгүй. `occurred_at` тодорхойгүй бол `null`, `recorded_at`-ыг backend UTC-ээр өгнө. Эдгээрийг андуурахгүй.
 
-MCP-ээр L1/L2-г өөрчлөхөд өмнөх хувилбар L3 database-ийн `document_revisions` техникийн хүснэгтэд хадгалагдана. Энэ нь хайлт дээр бодит үйл явдлын түүхтэй холилдохгүй. Утгатай бодит өөрчлөлтийг agent тусад нь L3 event болгон оруулна. Хэрэглэгч Markdown-ийг гаднаас зассан бол хайлт хүсэлт дээр өөрчлөлтийг индексэлнэ; автоматаар утгын тайлбар/event үүсгэхгүй. Хоёр хүсэлтийн хооронд гаднын editor-оор хийсэн бүх завсрын хувилбарыг watcher-гүй систем сэргээж чадахгүй. Тэдгээрийн хувилбарын хяналт нь Obsidian Git/editor history-ийн үүрэг; backend-ийн before-image амлалт нь зөвхөн MCP-ээр хийсэн бичилтээс эхэлнэ.
+MCP-ээр L3/L2-г өөрчлөхөд өмнөх хувилбар L1 database-ийн `document_revisions` техникийн хүснэгтэд хадгалагдана. Энэ нь хайлт дээр бодит үйл явдлын түүхтэй холилдохгүй. Утгатай бодит өөрчлөлтийг agent тусад нь L1 event болгон оруулна. Хэрэглэгч Markdown-ийг гаднаас зассан бол хайлт хүсэлт дээр өөрчлөлтийг индексэлнэ; автоматаар утгын тайлбар/event үүсгэхгүй. Хоёр хүсэлтийн хооронд гаднын editor-оор хийсэн бүх завсрын хувилбарыг watcher-гүй систем сэргээж чадахгүй. Тэдгээрийн хувилбарын хяналт нь Obsidian Git/editor history-ийн үүрэг; backend-ийн before-image амлалт нь зөвхөн MCP-ээр хийсэн бичилтээс эхэлнэ.
 
-Одоогийн session-оос шууд memory бичихэд Inbox заавал шаардахгүй. Patch нь evidence төрөл, `origin_ref` (session/message/tool-result locator), тухайн баримтыг дэмжих хамгийн бага `excerpt` өгнө. Backend excerpt-ийн SHA-256-ийг өөрөө тооцож, L3 `sources`-д excerpt ба locator-ийг тогтвортой хадгална; `event_sources` нь event-тэй холбох хүснэгт. Нэг excerpt дээд тал нь 64 KiB; бүтэн яриаг далдуур хуулж хадгалахгүй. Зөвхөн locator өгөөд дараа нь олдохгүй provenance үүсгэхийг зөвшөөрөхгүй. Энэ нь agent-ийн нотолгооны хуулбар болохоос гаднын tool дээрх үнэн байдлыг криптографаар баталсан гэсэн үг биш. Document change-ийн source refs нь мөн revision record-д хадгалагдана.
+Одоогийн session-оос шууд memory бичихэд Inbox заавал шаардахгүй. Patch нь evidence төрөл, `origin_ref` (session/message/tool-result locator), тухайн баримтыг дэмжих хамгийн бага `excerpt` өгнө. Backend excerpt-ийн SHA-256-ийг өөрөө тооцож, L1 `sources`-д excerpt ба locator-ийг тогтвортой хадгална; `event_sources` нь event-тэй холбох хүснэгт. Нэг excerpt дээд тал нь 64 KiB; бүтэн яриаг далдуур хуулж хадгалахгүй. Зөвхөн locator өгөөд дараа нь олдохгүй provenance үүсгэхийг зөвшөөрөхгүй. Энэ нь agent-ийн нотолгооны хуулбар болохоос гаднын tool дээрх үнэн байдлыг криптографаар баталсан гэсэн үг биш. Document change-ийн source refs нь мөн revision record-д хадгалагдана.
 
 ## 5. Файл ба өгөгдлийн бүтэц
 
@@ -69,11 +69,11 @@ Mem/
   L0/Inbox/                         # эх файлууд; filename + hash-ээр сонгоно
   L0/Archive/README.md              # нэг ерөнхий тайлбар
   L0/Archive/YYYY/MM/<operation-id>/<topic-matching-name>.zip
-  L1/devices.md                     # жишээ нэр; тухайн мэдээлэл байвал үүсгэнэ
-  L1/projects.md
-  L1/profile.md
+  L3/devices.md                     # жишээ нэр; тухайн мэдээлэл байвал үүсгэнэ
+  L3/projects.md
+  L3/profile.md
   L2/<readable-topic-name>/context.md
-  L3/history.sqlite3               # ҮНДСЭН өгөгдөл, устгаж rebuild хийхгүй
+  L1/history.sqlite3               # ҮНДСЭН өгөгдөл, устгаж rebuild хийхгүй
   Backend/pyproject.toml
   Backend/uv.lock
   Backend/src/mem/                  # MCP, storage, validation, recovery
@@ -88,22 +88,22 @@ Mem/
 
 `topic_id`, `document_id`, `event_id` нь backend үүсгэсэн UUID (ю-ю-ай-ди). Файлын нэр, slug, замаас гаргахгүй. Шинэ объектууд нэг patch дотор `new:device-main` зэрэг түр ref-ээр харилцан холбогдож болно; хадгалахдаа UUID болгож, mapping буцаана. Retry нь өмнөх mapping-ийг буцаана.
 
-Markdown frontmatter (фронтмэттер): `schema_version: 1`, `document_id`, `layer: L1|L2`, `topic_ids`, `title`, `updated_at`. UTF-8, Unicode NFC. `expected_sha256` нь файлын бодит bytes-ийг хэшилнэ; хүн гаднаас зассан өөрчлөлтийг revision дугаараар анзааралгүй алдахгүй. `updated_at` нь зохиогчийн өгсөн хугацаа; индексийн `observed_at` тусдаа.
+Markdown frontmatter (фронтмэттер): `schema_version: 1`, `document_id`, `layer: L3|L2`, `topic_ids`, `title`, `updated_at`. UTF-8, Unicode NFC. `expected_sha256` нь файлын бодит bytes-ийг хэшилнэ; хүн гаднаас зассан өөрчлөлтийг revision дугаараар анзааралгүй алдахгүй. `updated_at` нь зохиогчийн өгсөн хугацаа; индексийн `observed_at` тусдаа.
 
 Логик холбоос: `mem://topic/<uuid>`, `mem://document/<uuid>`, `mem://event/<uuid>`. Backend ID → одоогийн байрлалыг resolve хийнэ. Obsidian-ийн relative link-ийг нэмэлтээр ашиглаж болно; ердийн Obsidian ийм `mem://` холбоосыг өөрөө нээх ёстой гэж үзэхгүй. MCP-ээр зөөсөн файлд document ID хэвээр; эх үүсвэрт давхардсан ID байвал индекс чимээгүй сонгохгүй, алдаа гаргана.
 
-L3 үндсэн хүснэгтүүд: `topics`, `events`, `event_topics`, `sources`, `event_sources`, `document_revisions`, `operations`, `operation_documents`, `operation_sources`, `processed_sources`, `metadata`. Event нь immutable; correction нь өмнөх event-ийг заасан шинэ event. Topic нэр өөрчлөгдөж болно, ID өөрчлөгдөхгүй; topic revision-ийг optimistic concurrency шалгалтад ашиглана. `operations` ба before/after snapshot нь cache биш: тасалдлын дараах сэргээх өгөгдөл учраас L3 backup-д хамт орно.
+L1 үндсэн хүснэгтүүд: `topics`, `events`, `event_topics`, `sources`, `event_sources`, `document_revisions`, `operations`, `operation_documents`, `operation_sources`, `processed_sources`, `metadata`. Event нь immutable; correction нь өмнөх event-ийг заасан шинэ event. Topic нэр өөрчлөгдөж болно, ID өөрчлөгдөхгүй; topic revision-ийг optimistic concurrency шалгалтад ашиглана. `operations` ба before/after snapshot нь cache биш: тасалдлын дараах сэргээх өгөгдөл учраас L1 backup-д хамт орно.
 
 ## 6. Нэг бичилтийн хаалга, тасалдлаас сэргээх урсгал
 
-`memory_apply_patch` нь утгын өөрчлөлтийн нэгдсэн хаалга. Бүх өөрчлөлт бүр L1, L2, L3 гурвууланд бичих шаардлагагүй; тухайн patch-д хэрэгтэй өөрчлөлтүүдийг бүхэлд нь амжилттай хадгална. Архивын cache шинэчлэлт нь үндсэн хадгалалтын баталгаа биш.
+`memory_apply_patch` нь утгын өөрчлөлтийн нэгдсэн хаалга. Бүх өөрчлөлт бүр L3, L2, L1 гурвууланд бичих шаардлагагүй; тухайн patch-д хэрэгтэй өөрчлөлтүүдийг бүхэлд нь амжилттай хадгална. Архивын cache шинэчлэлт нь үндсэн хадгалалтын баталгаа биш.
 
 1. Нэг process/thread-ийн serialize ажиллагаа болон компьютер дээрх **нэг writer-ийн lock** авна. Хоёр MCP process нэг root нээхэд хоёр дахь нь тодорхой `STORE_BUSY` алдаа авна. Maintenance команд ч ижил lock ашиглана.
 2. Хүлээгдэж буй recovery-г гүйцэтгэнэ. Schema, зөвшөөрөгдсөн зам, source hash, document hash, topic/event холбоос, UTF-8, хэмжээг шалгана. Бүх validation амжилттай болохоос өмнө үндсэн өгөгдөл өөрчлөхгүй.
 3. `idempotency_key`-г шалгана. Ижил key + ижил normalized request → өмнөх үр дүн/ID. Ижил key + өөр request → `IDEMPOTENCY_CONFLICT`.
-4. L3 SQLite transaction-д `PREPARED` operation, шинэ UUID mapping, before/after document bytes, эх Inbox snapshot, manifest-ийг хадгална. `foreign_keys=ON`, WAL, `synchronous=FULL`, `busy_timeout=5000` ашиглана.
+4. L1 SQLite transaction-д `PREPARED` operation, шинэ UUID mapping, before/after document bytes, эх Inbox snapshot, manifest-ийг хадгална. `foreign_keys=ON`, WAL, `synchronous=FULL`, `busy_timeout=5000` ашиглана.
 5. Файлыг нэг filesystem дотор temp file + flush/fsync + atomic replacement-аар суулгана. Дарж солихын яг өмнө hash-ийг дахин шалгана. Move-ийн destination байгаа бол дарж бичихгүй. Recovery нь тухайн замын bytes before/after-ийн альтай тохирч байгааг харж үргэлжилнэ.
-6. Бүх document зөв байрласны дараа L3 events, corrections, revisions болон operation-ийн `APPLIED` төлөвийг **нэг SQLite transaction**-аар commit хийнэ. Тэр хүртэл гаднах MCP read/search нь хэсэгчилсэн үр дүн үзүүлэхгүй.
+6. Бүх document зөв байрласны дараа L1 events, corrections, revisions болон operation-ийн `APPLIED` төлөвийг **нэг SQLite transaction**-аар commit хийнэ. Тэр хүртэл гаднах MCP read/search нь хэсэгчилсэн үр дүн үзүүлэхгүй.
 7. Тодорхой тэмдэглэсэн Inbox item-уудыг архивлана. Дуусвал `DONE`; алдаа гарвал `APPLIED` хэвээр, `archive_status=pending` буцаана. Retry шинэ event үүсгэхгүй. Cache update алдаа гарсан нь үндсэн өгөгдлийг буцааж бичих шалтгаан болохгүй.
 
 Энэ бол filesystem + SQLite-г хамарсан жинхэнэ ACID transaction биш. Дэмжигдэх амлалт нь: нэг writer, durable journal, дахин оролдож болох үйлдэл, process restart үед сэргээх, эргэлзээтэй төлөвт чимээгүй overwrite хийхгүй байх. Эхний баталгаажуулалт нь local filesystem дээрх process termination/retry; network drive дэмжихгүй. Disk/power loss-ын баталгаа нь OS/filesystem-ийн flush semantics-ээс хамаарна, энэ хувилбар дурын hardware failure-д өгөгдөл алдагдахгүй гэж амлахгүй. Startup integrity check болон тусдаа backup нь энэ эрсдэлийг илрүүлж/сэргээхэд хэрэглэгдэнэ.
@@ -116,7 +116,7 @@ Obsidian зэрэг гаднын editor энэ lock-ийг дагахгүй. Х�
 
 Inbox-ийг AI зөвхөн тухайн session/task дотор хэрэгтэй үед list/read хийнэ. Backend утгыг хураангуйлахгүй, timer/polling ажиллуулахгүй.
 
-Patch нь сонгосон source бүрийн `relative_path`, `expected_sha256`, processing outcome-ийг агуулна. `recorded` outcome нь түүнтэй холбоотой дор хаяж нэг document/event өөрчлөлттэй; `no_memory` нь яагаад санах зүйлгүйг товч тайлбарласан operational тэмдэглэлтэй. Чухал зүйлгүй яриаг зохиомол L3 event үүсгэж байж архивлахгүй. Source-ийг хэсэгчлэн ашигласан бол `close_inbox`-д оруулахгүй.
+Patch нь сонгосон source бүрийн `relative_path`, `expected_sha256`, processing outcome-ийг агуулна. `recorded` outcome нь түүнтэй холбоотой дор хаяж нэг document/event өөрчлөлттэй; `no_memory` нь яагаад санах зүйлгүйг товч тайлбарласан operational тэмдэглэлтэй. Чухал зүйлгүй яриаг зохиомол L1 event үүсгэж байж архивлахгүй. Source-ийг хэсэгчлэн ашигласан бол `close_inbox`-д оруулахгүй.
 
 Архивлахаас **өмнө `.md` эхийн архивлагдах нэрийг агуулгын сэдэвтэй нь тохируулна**. Жишээ: `chat-001.md` → `Mem-MCP-холболтын-шийдвэр.md`. Agent нь completion-д `archive_filename` өгнө; backend нэрийг шалгаж, journal-д анхны path/name болон шинэ archive name-ийг хадгална. Олон сэдэвтэй эхэд агуулгыг бүхэлд нь төлөөлөх нэр сонгоно; нэрлэхийн тулд эхийг таслах/хураангуйлахгүй. Нэр нь ID биш, эх bytes өөрчлөгдөхгүй. Markdown биш эхэд өргөтгөлийг нь хадгална.
 
@@ -130,15 +130,15 @@ Final ZIP зөв болсон үед л Inbox дахь эхийг устгана
 
 Индекс: `Backend/.state/search.sqlite3`; SQLite FTS5 `unicode61`, NFC текст, case-insensitive literal үгийн хайлт, Монгол кирилл/English хосолсон агуулга. Эхний хувилбарт morphology, transliteration expansion, semantic search амлахгүй. SQL/MATCH raw syntax-ийг хэрэглэгчийн query болгон шууд ажиллуулахгүй. Хоосон query → validation error. Дээд хязгаар: `query=500` тэмдэгт, `limit=1..100` (default 20).
 
-Нэгдсэн индексийн зориулалт нь нэг асуултаар L1, L2, L3 гурваас холбогдох мэдээллийн байрлалыг олох. Жишээ нь “Mem MCP” хайлт L1-ийн project товч, L2-ийн зорилго/шийдвэр, L3-ийн бодит тестийн үр дүнг нэг дор олно. Индекс өөрөө шинэ memory үүсгэхгүй, үндсэн эхийг орлохгүй; олдсон үр дүнгээс MCP эх document/event-ийг уншина. Маш жижиг санд хүсэлт бүрээр бүх эхийг уншиж хайж болох ч хэмжээ өсөхөд хүсэлт бүрийн давтагдах parse/search ажлыг индекс багасгана. Raw Inbox/ZIP default нэгдсэн хайлтад орохгүй.
+Нэгдсэн индексийн зориулалт нь нэг асуултаар L3, L2, L1 гурваас холбогдох мэдээллийн байрлалыг олох. Жишээ нь “Mem MCP” хайлт L3-ийн project товч, L2-ийн зорилго/шийдвэр, L1-ийн бодит тестийн үр дүнг нэг дор олно. Индекс өөрөө шинэ memory үүсгэхгүй, үндсэн эхийг орлохгүй; олдсон үр дүнгээс MCP эх document/event-ийг уншина. Маш жижиг санд хүсэлт бүрээр бүх эхийг уншиж хайж болох ч хэмжээ өсөхөд хүсэлт бүрийн давтагдах parse/search ажлыг индекс багасгана. Raw Inbox/ZIP default нэгдсэн хайлтад орохгүй.
 
-Search хүсэлт бүрт L1/L2 inventory + SHA-256, L3 `source_revision`-ийг шалгаж шаардлагатай cache refresh хийнэ. Тиймээс Obsidian-аар шинээр нэмсэн үг дараагийн хүсэлтээс хайгдана. Эхний хувилбар бага хэмжээний хувийн сан гэж үзсэн; томроход хэмжилтээр incremental optimization хийнэ. Timer байхгүй. Malformed Markdown, duplicate IDs, broken required refs-ийг бүтэн сангийн шалгалтаар ил тод мэдээлж, дутуу индексийг бүрэн мэт буцаахгүй.
+Search хүсэлт бүрт L3/L2 inventory + SHA-256, L1 `source_revision`-ийг шалгаж шаардлагатай cache refresh хийнэ. Тиймээс Obsidian-аар шинээр нэмсэн үг дараагийн хүсэлтээс хайгдана. Эхний хувилбар бага хэмжээний хувийн сан гэж үзсэн; томроход хэмжилтээр incremental optimization хийнэ. Timer байхгүй. Malformed Markdown, duplicate IDs, broken required refs-ийг бүтэн сангийн шалгалтаар ил тод мэдээлж, дутуу индексийг бүрэн мэт буцаахгүй.
 
-Search result: төрөл, ID/ref, topic ID, title, snippet, `source_etag`, evidence төрөл, score. L1/L2 current text ба L3 original/correction history ялгаатай тэмдэглэгээтэй байна. Correction нь `corrects_event_id`-аар өмнөх event эсвэл хамгийн сүүлийн correction-ийг заасан нэг шугаман chain байна; аль хэдийн correction-той node-д шинэ салбар залгахыг `CONFLICT` гэж буцаана. `memory_read` original болон бүтэн chain, `effective_event` болгон chain-ийн сүүлчийн бичлэгийг өгнө. Хуучин үгээр search хийсэн үед хуучин event олдож болно, гэхдээ `record_status=corrected`, `latest_correction_ref`, шинэ үр дүнгийн товч тайлбар заавал дагалдана. Хуучирсан event-ийг ганцааранг нь current truth гэж гаргахгүй. Өөр төрлийн score-уудыг “үнэн байх магадлал” гэж тайлбарлахгүй.
+Search result: төрөл, ID/ref, topic ID, title, snippet, `source_etag`, evidence төрөл, score. L3/L2 current text ба L1 original/correction history ялгаатай тэмдэглэгээтэй байна. Correction нь `corrects_event_id`-аар өмнөх event эсвэл хамгийн сүүлийн correction-ийг заасан нэг шугаман chain байна; аль хэдийн correction-той node-д шинэ салбар залгахыг `CONFLICT` гэж буцаана. `memory_read` original болон бүтэн chain, `effective_event` болгон chain-ийн сүүлчийн бичлэгийг өгнө. Хуучин үгээр search хийсэн үед хуучин event олдож болно, гэхдээ `record_status=corrected`, `latest_correction_ref`, шинэ үр дүнгийн товч тайлбар заавал дагалдана. Хуучирсан event-ийг ганцааранг нь current truth гэж гаргахгүй. Өөр төрлийн score-уудыг “үнэн байх магадлал” гэж тайлбарлахгүй.
 
 | MCP tool | Үүрэг |
 |---|---|
-| `memory_search(query, layers, topic_ids, limit)` | L1/L2/L3 нэгдсэн literal хайлт |
+| `memory_search(query, layers, topic_ids, limit)` | L3/L2/L1 нэгдсэн literal хайлт |
 | `memory_read(ref)` | Topic/document/event/source-ийг canonical эхээс унших; hash ба холбоос буцаах |
 | `memory_apply_patch(patch)` | Topic/doc/event үүсгэх, doc шинэчлэх/зөөх, correction нэмэх, сонгосон Inbox item дуусгах |
 | `memory_inbox_list(cursor, limit)` | Inbox жагсаалт, path, хэмжээ, content hash |
@@ -154,23 +154,23 @@ MCP stdio stdout-д зөвхөн protocol; log stderr-д. Error code: `VALIDATIO
 
 Замыг canonical root дотор шалгана; `..`, absolute path, escaping symlink, archive entry traversal, destination collision-ийг хориглоно. Inbox/raw text нь өгөгдөл; доторх “заавар”-ыг SKILL.md эсвэл системийн заавар гэж үзэхгүй. YAML safe parsing, bound SQL parameters хэрэглэнэ. Backend arbitrary shell/network tool өгөхгүй.
 
-L1/L2/L3 руу API key/password зэрэг илт credential pattern оруулахыг validation-оор татгалзана; энэ нь нууц мэдээллийг төгс танина гэсэн баталгаа биш. Raw L0 эх 1:1 хэвээр тул нууц агуулж болохыг баримтжуулна; raw/log/DB-г автоматаар Git рүү нийтлэхгүй. Алдааны log-д бүтэн memory текст, credential утга хэвлэхгүй. Хувийн эрүүл мэнд зэрэг мэдээлэл хэрэглэгч өөрөө өгсөн, санах шаардлагатай үед л орно.
+L3/L2/L1 руу API key/password зэрэг илт credential pattern оруулахыг validation-оор татгалзана; энэ нь нууц мэдээллийг төгс танина гэсэн баталгаа биш. Raw L0 эх 1:1 хэвээр тул нууц агуулж болохыг баримтжуулна; raw/log/DB-г автоматаар Git рүү нийтлэхгүй. Алдааны log-д бүтэн memory текст, credential утга хэвлэхгүй. Хувийн эрүүл мэнд зэрэг мэдээлэл хэрэглэгч өөрөө өгсөн, санах шаардлагатай үед л орно.
 
-GitHub/Obsidian Git plugin (гит плагин)-ийг хүсвэл текст болон code-ийн хувилбарын хяналтад ашиглана. Backend Git commit/push хийхгүй. Санал болгосон default ignore: `L0/Inbox/**`, архивын ZIP-үүд, `L3/*.sqlite3*`, `Backend/.state/**`, `.venv/**`. Archive README болон код/баримт бичиг track хийнэ. Raw архивыг Git-д оруулах өөр сонголт гарвал тусад нь шийднэ. **Obsidian Git бол SQLite backup-ийн орлуулга биш.** `merge=union` L3-д хэрэглэхгүй.
+GitHub/Obsidian Git plugin (гит плагин)-ийг хүсвэл текст болон code-ийн хувилбарын хяналтад ашиглана. Backend Git commit/push хийхгүй. Санал болгосон default ignore: `L0/Inbox/**`, архивын ZIP-үүд, `L1/*.sqlite3*`, `Backend/.state/**`, `.venv/**`. Archive README болон код/баримт бичиг track хийнэ. Raw архивыг Git-д оруулах өөр сонголт гарвал тусад нь шийднэ. **Obsidian Git бол SQLite backup-ийн орлуулга биш.** `merge=union` L1-д хэрэглэхгүй.
 
-`mem backup` нь writer lock дотор recovery дууссан тогтвортой төлөвөөс SQLite backup API-гаар DB snapshot авч, L1/L2, Inbox, бүх archive, source revision, schema version болон SHA-256 manifest-тай нэг backup үүсгэнэ. WAL/shm файлыг шууд copy хийхгүй. Cache-ийг оруулахгүй. Гаднын editor/importer lock-д орохгүй тул database-ээс бусад canonical файлын inventory ба hashes-ийг snapshot-ын эхэнд/төгсгөлд шалгаж өөрчлөгдвөл бүтэлгүйтүүлнэ; backup үед external edit/import хийхгүй гэсэн ижил хязгаар үйлчилнэ.
+`mem backup` нь writer lock дотор recovery дууссан тогтвортой төлөвөөс SQLite backup API-гаар DB snapshot авч, L3/L2, Inbox, бүх archive, source revision, schema version болон SHA-256 manifest-тай нэг backup үүсгэнэ. WAL/shm файлыг шууд copy хийхгүй. Cache-ийг оруулахгүй. Гаднын editor/importer lock-д орохгүй тул database-ээс бусад canonical файлын inventory ба hashes-ийг snapshot-ын эхэнд/төгсгөлд шалгаж өөрчлөгдвөл бүтэлгүйтүүлнэ; backup үед external edit/import хийхгүй гэсэн ижил хязгаар үйлчилнэ.
 
 `mem restore` зөвхөн шинэ/хоосон destination-д сэргээнэ. Hash ба schema-ийг шалгаж, SQLite integrity/foreign key checks хийж, canonical эхээс index-ийг rebuild хийнэ. Одоогийн store-ийг дарж restore хийхгүй. Backup-ийг repo-гийн гадна хадгалж, бодит off-device copy-г хэрэглэгчийн backup систем хариуцна; энэ хувилбар өөрөө cloud upload хийхгүй.
 
 ## 10. Хүлээн авах шалгуур
 
-1. Хэрэгтэй мэдээлэл зөв L1/L2/L3-д ордог сонгомол жишээ: бодит тестийн үр дүн хадгалагдана, энгийн асуулт/хэрэгжээгүй санал L3-д орохгүй.
-2. MCP-ээр L1 шинэчлэгдэхэд өмнөх bytes сэргээгдэх; L3 correction эх event-ийг устгахгүй; мэдэгдэхгүй хугацааг зохиохгүй. Session-only evidence-ийн excerpt ба hash нь дараагийн session-д уншигдах.
+1. Хэрэгтэй мэдээлэл зөв L3/L2/L1-д ордог сонгомол жишээ: бодит тестийн үр дүн хадгалагдана, энгийн асуулт/хэрэгжээгүй санал L1-д орохгүй.
+2. MCP-ээр L3 шинэчлэгдэхэд өмнөх bytes сэргээгдэх; L1 correction эх event-ийг устгахгүй; мэдэгдэхгүй хугацааг зохиохгүй. Session-only evidence-ийн excerpt ба hash нь дараагийн session-д уншигдах.
 3. Document folder/name өөрчлөгдөхөд ID resolve ажиллах; duplicate ID болон overwrite conflict ил тод алдаа өгөх.
 4. Ижил patch retry event/archive давхардуулахгүй; key дахин өөр утгаар ашиглавал татгалзах.
 5. PREPARED, эхний файл replacement, APPLIED, ZIP байршуулсны дараах цэг бүрт process таслаад restart хийхэд нэг л логик үр дүн гарах; зөрчил байвал өгөгдөл хамгаалж блоклох.
 6. Архивын эх bytes нь оролттой 1:1 таарах, `.md` болон ZIP нэр нь сэдэвтэйгээ тохирох. Rename/retry үед нэрийн mapping хадгалагдах. Хадгалалт эсвэл ZIP verification бүтэлгүйтвэл эх алдагдахгүй. `no_memory` зам бодитой ажиллах.
-7. Search cache-ийг устгаад L1/L2/L3-аас сэргээхэд ID, текст, source refs ижил байх. Монгол `Ө/Ү/Ё`, English, punctuation болон manual edit-ийг шалгах.
+7. Search cache-ийг устгаад L3/L2/L1-аас сэргээхэд ID, текст, source refs ижил байх. Монгол `Ө/Ү/Ё`, English, punctuation болон manual edit-ийг шалгах.
 8. Бодит stdio MCP session-ээр list/read/write/search/correction урсгал ажиллах; tool discovery шалгагдах; idle үед Inbox file нэмэхэд memory өөрөө үүсэхгүй.
 9. Backup-ийг тусдаа шинэ root-д restore хийж бүх canonical hash/event count/correction холбоос таарах, search ажиллах.
 10. Сонгосон бодит OS/client дээр `mem serve` холболт шалгагдсан байх. Одоогийн cloud Linux-ийн үр дүнг Windows/macOS дээр шалгасан мэт тайлагнахгүй.
@@ -191,4 +191,4 @@ Checkpoint A: storage/write/recovery туршилтын дараа найдва�
 
 ## Git snapshot-ийн шинэчилсэн шийдвэр
 
-Хэрэглэгч L3-ийг Git-ээр хянах боломжийг зөвшөөрсөн. Live `L3/history.sqlite3` болон WAL/shm ignored хэвээр; `mem snapshot` командаар SQLite backup API ашиглан `L3/history.snapshot.sqlite3` үүсгэж Git-д track хийнэ. Backend өөрөө commit/push хийхгүй. Snapshot нь зөвхөн L3-ийн хувилбар; бүрэн store backup-д Markdown/Inbox/ZIP бас орно. Шинэ root-д snapshot-оос L3-ийг explicit restore хийнэ; pending/conflicted operation-той snapshot үүсгэхгүй.
+Хэрэглэгч L1-ийг Git-ээр хянах боломжийг зөвшөөрсөн. Live `L1/history.sqlite3` болон WAL/shm ignored хэвээр; `mem snapshot` командаар SQLite backup API ашиглан `L1/history.snapshot.sqlite3` үүсгэж Git-д track хийнэ. Backend өөрөө commit/push хийхгүй. Snapshot нь зөвхөн L1-ийн хувилбар; бүрэн store backup-д Markdown/Inbox/ZIP бас орно. Шинэ root-д snapshot-оос L1-ийг explicit restore хийнэ; pending/conflicted operation-той snapshot үүсгэхгүй.
