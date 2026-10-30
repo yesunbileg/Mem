@@ -5,7 +5,7 @@ description: Use when an AI agent needs durable personal or project context, pri
 
 # Using Mem memory
 
-Memory is selective and source-backed. L3/L2 are current Markdown; L1 is actual local history in SQLite. Tool calls need no extra permission prompt within the user's authorized task.
+Memory is selective and source-backed. Higher numbered levels represent more distilled information; L1 is evidence-backed history, L2 is topic context, and L3 is concise high-value facts. L3/L2 are current Markdown; L1 is actual local history in SQLite. Tool calls need no extra permission prompt within the user's authorized task.
 
 | Information | Destination |
 |---|---|
