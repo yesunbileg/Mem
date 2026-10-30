@@ -185,3 +185,31 @@ def test_source_free_documents_use_schema2_and_topic_is_l2_l3_only(store):
     assert set(topic["document_refs"]) == {l2, l3}
     assert "event_refs" not in topic
     assert "source_refs" not in read_memory(store, l2).data
+
+
+def test_ambiguous_related_target_is_conflict_not_silent_choice(store):
+    result = apply_patch(store, linked_patch(reciprocal=False))
+    l2 = "mem://document/" + result.id_map["new:l2"]
+    l3 = "mem://document/" + result.id_map["new:l3"]
+    (store.root / "L3/another.md").write_bytes(
+        (store.root / "L3/summary.md").read_bytes()
+    )
+    current = read_memory(store, l2)
+    with pytest.raises(MemoryError, match="CONFLICT"):
+        apply_patch(
+            store,
+            MemoryPatch(
+                idempotency_key="ambiguous-target",
+                documents=[{
+                    "action": "replace", "ref": l2, "layer": "L2",
+                    "topic_refs": [
+                        "mem://topic/" + result.id_map["new:topic"]
+                    ],
+                    "path": "L2/context.md", "title": "Existing context",
+                    "markdown": "Changing the text",
+                    "related_refs": [l3],
+                    "expected_sha256": current.source_etag,
+                }],
+            ),
+        )
+    assert store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 1
