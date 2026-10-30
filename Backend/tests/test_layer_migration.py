@@ -12,6 +12,7 @@ from mem.search import search_memory
 from mem.store import init_store, open_store
 
 from .helpers import sample_patch
+from .test_archive import inbox_patch
 
 
 def _legacy_root(tmp_path, *, pending=False, snapshot_only=False):
@@ -19,6 +20,8 @@ def _legacy_root(tmp_path, *, pending=False, snapshot_only=False):
     root = tmp_path / "old"
     with init_store(root) as store:
         result = apply_patch(store, sample_patch())
+        archive_patch, _ = inbox_patch(store)
+        apply_patch(store, archive_patch)
         if pending:
             from mem.journal import prepare_operation
 
@@ -54,6 +57,11 @@ def test_levels_progress_from_history_to_distilled_knowledge(tmp_path):
 def test_migrate_legacy_store_preserves_data_and_original(tmp_path, snapshot_only):
     old, a = _legacy_root(tmp_path, snapshot_only=snapshot_only)
     raw_before = (old / "L1/projects.md").read_bytes()
+    old_archives = {
+        p.relative_to(old).as_posix(): p.read_bytes()
+        for p in (old / "L0/Archive").rglob("*.zip")
+    }
+    assert old_archives
     source_db = old / "L3" / (
         "history.snapshot.sqlite3" if snapshot_only else "history.sqlite3"
     )
@@ -67,6 +75,10 @@ def test_migrate_legacy_store_preserves_data_and_original(tmp_path, snapshot_onl
     assert (new / "L0/Inbox/raw.txt").read_bytes() == (old / "L0/Inbox/raw.txt").read_bytes()
     assert b"layer: L3" in (new / "L3/projects.md").read_bytes()
     assert (new / "L1/history.snapshot.sqlite3").exists()
+    assert {
+        p.relative_to(new).as_posix(): p.read_bytes()
+        for p in (new / "L0/Archive").rglob("*.zip")
+    } == old_archives
     with open_store(new) as store:
         hits = search_memory(store, SearchRequest(query="smoke")).items
         assert {h.ref for h in hits} == {
