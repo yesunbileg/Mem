@@ -7,7 +7,7 @@ import pytest
 from mem.apply import apply_patch
 from mem.errors import MemoryError
 from mem.legacy_migration import migrate_legacy_store
-from mem.models import SearchRequest
+from mem.models import MemoryPatch, SearchRequest
 from mem.search import search_memory
 from mem.store import init_store, open_store
 
@@ -22,7 +22,7 @@ def _legacy_root(tmp_path, *, pending=False, snapshot_only=False):
         if pending:
             from mem.journal import prepare_operation
 
-            prepare_operation(store, sample_patch(key="unfinished"))
+            prepare_operation(store, MemoryPatch(idempotency_key="unfinished"))
     document = root / "L3/projects.md"
     old_document = root / "L1/projects.md"
     old_document.write_bytes(document.read_bytes().replace(b"layer: L3", b"layer: L1"))
