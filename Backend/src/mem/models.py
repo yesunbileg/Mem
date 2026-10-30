@@ -117,3 +117,26 @@ class HealthReport(Model):
     source_revision: int = 0
     index_revision: int | None = None
     pending_operations: list[str] = Field(default_factory=list)
+
+class SearchHit(Model):
+    ref: str
+    layer: str
+    topic_ids: list[str]
+    title: str
+    snippet: str
+    source_etag: str
+    score: float
+    record_status: str = 'active'
+    latest_correction_ref: str | None = None
+    effective_summary: str | None = None
+    evidence_kind: str | None = None
+
+class SearchPage(Model):
+    items: list[SearchHit]
+    index_revision: int
+
+class IndexReport(Model):
+    documents: int
+    events: int
+    source_revision: int
+    invalid_sources: list[str] = Field(default_factory=list)
