@@ -23,14 +23,14 @@ def test_backup_restore_preserves_canonical_sources(store, tmp_path):
     (store.root / "L0/Inbox/unprocessed.md").write_text("raw new")
     backup = tmp_path / "backup.zip"
     manifest = create_backup(store, backup)
-    assert "L3/history.sqlite3" in manifest.files
+    assert "L1/history.sqlite3" in manifest.files
     assert not any(".state" in n for n in manifest.files)
     dest = tmp_path / "restored"
     assert restore_backup(backup, dest).ready
     with open_store(dest) as s:
         assert count_events(s) == 1
-        assert (dest / "L1/projects.md").read_bytes() == (
-            store.root / "L1/projects.md"
+        assert (dest / "L3/projects.md").read_bytes() == (
+            store.root / "L3/projects.md"
         ).read_bytes()
         assert (dest / "L0/Inbox/unprocessed.md").read_text() == "raw new"
         assert search_memory(s, SearchRequest(query="smoke")).items
@@ -59,7 +59,7 @@ def test_snapshot_is_consistent_and_restores_explicitly(store, tmp_path):
         restore_snapshot(snapshot, target)
 
 
-@pytest.mark.parametrize("member", ["../escape", "/tmp/evil", "L1/../../out"])
+@pytest.mark.parametrize("member", ["../escape", "/tmp/evil", "L3/../../out"])
 def test_restore_rejects_zip_traversal(tmp_path, member):
     p = tmp_path / "bad.zip"
     with zipfile.ZipFile(p, "w") as z:
@@ -88,7 +88,7 @@ def test_restore_rejects_nonempty_and_corrupt_backup(store, tmp_path):
     with zipfile.ZipFile(p) as src, zipfile.ZipFile(corrupt, "w") as dst:
         for name in src.namelist():
             dst.writestr(
-                name, b"corrupt" if name == "L1/projects.md" else src.read(name)
+                name, b"corrupt" if name == "L3/projects.md" else src.read(name)
             )
     with pytest.raises(MemoryError):
         restore_backup(corrupt, tmp_path / "new")
@@ -99,7 +99,7 @@ def test_pending_conflict_blocks_backup(store, tmp_path):
     from mem.journal import prepare_operation
 
     prepare_operation(store, sample_patch())
-    (store.root / "L1/projects.md").write_bytes(b"external")
+    (store.root / "L3/projects.md").write_bytes(b"external")
     with pytest.raises(MemoryError):
         create_backup(store, tmp_path / "b.zip")
     with pytest.raises(MemoryError):
@@ -117,7 +117,7 @@ def test_external_change_during_backup_rejected(store, tmp_path, monkeypatch):
         nonlocal calls
         calls += 1
         if calls == 2:
-            path = s.root / "L1/projects.md"
+            path = s.root / "L3/projects.md"
             path.write_bytes(path.read_bytes() + b"\nchanged")
         return original(s)
 

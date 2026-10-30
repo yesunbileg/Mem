@@ -74,7 +74,7 @@ def create_server(root: Path) -> FastMCP:
         topic_ids: list[str] | None = None,
         limit: int = 20,
     ) -> SearchPage:
-        """Search L1/L2/L3 literally; follow refs to canonical content. Corrected results include their current conclusion."""
+        """Search L3/L2/L1 literally; follow refs to canonical content. Corrected results include their current conclusion."""
         return search_memory(
             state["store"],
             SearchRequest(query=query, layers=layers, topic_ids=topic_ids, limit=limit),
@@ -115,7 +115,7 @@ def create_server(root: Path) -> FastMCP:
     @server.tool()
     @safe
     def memory_reindex() -> IndexReport:
-        """Rebuild disposable search cache; never recreate or delete L3 history."""
+        """Rebuild disposable search cache; never recreate or delete L1 history."""
         return rebuild_index(state["store"])
 
     @server.tool()
