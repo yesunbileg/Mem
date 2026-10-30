@@ -17,7 +17,7 @@ class TopicChange(Model):
 class DocumentChange(Model):
     action: Literal["create", "replace", "move"] = "create"
     ref: str
-    layer: Literal["L1", "L2"] | None = None
+    layer: Literal["L3", "L2"] | None = None
     topic_refs: list[str] = Field(default_factory=list)
     title: str | None = None
     path: str
@@ -116,7 +116,7 @@ class ApplyResult(Model):
 
 class SearchRequest(Model):
     query: str = Field(min_length=1, max_length=500)
-    layers: list[Literal["L1", "L2", "L3"]] | None = None
+    layers: list[Literal["L3", "L2", "L1"]] | None = None
     topic_ids: list[str] | None = None
     limit: int = Field(default=20, ge=1, le=100)
 

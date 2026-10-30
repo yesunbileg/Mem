@@ -79,7 +79,7 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
         if meta["schema_version"] != 1:
             raise ValueError("schema")
         ident = str(UUID(meta["document_id"]))
-        if meta["layer"] not in ("L1", "L2") or path.split("/")[0] != meta["layer"]:
+        if meta["layer"] not in ("L3", "L2") or path.split("/")[0] != meta["layer"]:
             raise ValueError("layer")
         topics = meta["topic_ids"]
         if (
@@ -130,7 +130,7 @@ def load_documents(store, *, tolerate_invalid=False, include_issues=False):
     docs = []
     seen = set()
     issues = []
-    for layer in ("L1", "L2"):
+    for layer in ("L3", "L2"):
         for path in sorted((store.root / layer).rglob("*.md")):
             rel = path.relative_to(store.root).as_posix()
             try:

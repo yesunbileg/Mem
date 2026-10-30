@@ -77,7 +77,7 @@ def _build(store, docs):
             corrected = latest["id"] != e["id"]
             add(
                 "mem://event/" + e["id"],
-                "L3",
+                "L1",
                 e["topic_ids"],
                 e["summary"],
                 e["details"],
