@@ -120,3 +120,27 @@ def test_shorthand_change_requires_previous_meaning_and_reindexes(store):
     )
     assert not search_memory(store, SearchRequest(query="push")).items
     assert search_memory(store, SearchRequest(query="scp")).items
+
+
+def test_codes_survive_backup_restore(tmp_path):
+    from mem.backup import create_backup, restore_backup
+    from mem.shorthand import get_shorthand
+    from mem.store import init_store, open_store
+
+    root = tmp_path / "original"
+    backup_path = tmp_path / "snapshot.zip"
+    with init_store(root) as source:
+        apply_patch(
+            source,
+            MemoryPatch(
+                idempotency_key="backup-shorthand",
+                shorthand=[
+                    {"code": "%go", "expansion": "stage commit push"}
+                ],
+            ),
+        )
+        create_backup(source, backup_path)
+
+    restore_backup(backup_path, tmp_path / "restored")
+    with open_store(tmp_path / "restored") as restored:
+        assert get_shorthand(restored) == {"%go": "stage commit push"}
