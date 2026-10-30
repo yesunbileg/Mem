@@ -2,6 +2,14 @@
 
 Python 3.12+, SQLite FTS5, official MCP Python SDK, Pydantic 2, PyYAML, filelock. `uv.lock` dependency-ийг тогтооно. `src/mem/migrations` нь wheel дотор хамт багцлагдана. Store schema version 1; мэдэхгүй шинэ schema-г чимээгүй өөрчлөхгүй.
 
+## Түвшний семантик
+
+L0 — түүхий эх, боловсруулсны дараах ZIP архив; L1 — батлагдсан
+action/result/test/correction-ийн SQLite түүх; L2 — сэдвийн зорилго,
+шийдвэр, контекст; L3 — нэг мөрийн өндөр ач холбогдолтой баримт.
+FTS5 индекс нь тусдаа disposable SQLite cache бөгөөд L1 history DB биш.
+Хуучин layout-ийн `migrate-layers` командыг үндсэн README-д тайлбарласан.
+
 ## Долоон хэрэгсэл
 
 | Нэр | Оролт/үр дүн |
