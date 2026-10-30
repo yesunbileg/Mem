@@ -6,14 +6,14 @@
 |---|---|
 | `L0/Inbox` | Боловсруулаагүй UTF-8 эх, bytes 1:1 |
 | `L0/Archive` | Сэдэвтэй нэр бүхий эх + manifest-тай, өөрчлөхгүй ZIP |
-| `L1` | Товч одоогийн баримт |
+| `L3` | Товч одоогийн баримт |
 | `L2` | Topic/project-ийн зорилго, нөхцөл, шийдвэр, дараагийн алхам |
-| `L3/history.sqlite3` | Бодит үйл явдал, эх сурвалж, correction, ажиллагааны journal |
-| `Backend/.state/search.sqlite3` | L1/L2/L3-аас сэргээгдэх нэгдсэн хайлтын cache |
+| `L1/history.sqlite3` | Бодит үйл явдал, эх сурвалж, correction, ажиллагааны journal |
+| `Backend/.state/search.sqlite3` | L3/L2/L1-аас сэргээгдэх нэгдсэн хайлтын cache |
 
-Энгийн асуулт, хэрэгжээгүй AI санал L3-ийн үйл явдал болохгүй. Юуг санахыг agent шийдэж, backend нь формат, эх сурвалж, давхардал, зөрчил, хадгалалтыг хамгаална. L3 correction нь өмнөх мэдээллийг дарж устгахгүй.
+Энгийн асуулт, хэрэгжээгүй AI санал L1-ийн үйл явдал болохгүй. Юуг санахыг agent шийдэж, backend нь формат, эх сурвалж, давхардал, зөрчил, хадгалалтыг хамгаална. L1 correction нь өмнөх мэдээллийг дарж устгахгүй.
 
-Хоосон `L1`, `L2`, `L0/Inbox` хавтсыг clone хийхэд үүсгэхийн тулд `.gitkeep` тэмдэглэгээ хадгална. `L0/Inbox/.gitkeep` нь reserved техникийн файл, Inbox-ийн эх гэж боловсруулахгүй. Бодит Inbox агуулга Git default-д ignored хэвээр; L1/L2-ийн Markdown файлууд Git-д track хийж болно.
+Хоосон `L3`, `L2`, `L0/Inbox` хавтсыг clone хийхэд үүсгэхийн тулд `.gitkeep` тэмдэглэгээ хадгална. `L0/Inbox/.gitkeep` нь reserved техникийн файл, Inbox-ийн эх гэж боловсруулахгүй. Бодит Inbox агуулга Git default-д ignored хэвээр; L3/L2-ийн Markdown файлууд Git-д track хийж болно.
 
 ## Суулгах, эхлүүлэх
 
@@ -54,30 +54,30 @@ Client/agent-ийн зааварт [memory skill](Backend/skills/memory/SKILL.md
 
 ## SQLite-ийг Git-ээр хувилбарчлах
 
-Live DB/WAL/cache ignored. **Consistent L3 snapshot** (снэпшот) нь Git-д track хийх зориулалттай:
+Live DB/WAL/cache ignored. **Consistent L1 snapshot** (снэпшот) нь Git-д track хийх зориулалттай:
 
 ```bash
 cd Backend
 uv run mem --root .. snapshot
 cd ..
-git add L3/history.snapshot.sqlite3
-# L1/L2 өөрчлөлт байвал тэдгээрийг мөн stage хийнэ.
+git add L1/history.snapshot.sqlite3
+# L3/L2 өөрчлөлт байвал тэдгээрийг мөн stage хийнэ.
 git commit -m "memory: checkpoint"
 ```
 
 Snapshot үүсгэх/commit хийх хооронд өөр session эсвэл editor-оор memory-г зэрэг өөрчлөхгүй. Backend өөрөө Git commit/push хийхгүй. Binary snapshot-ийн мөр тус бүрийн diff/merge ажиллахгүй; нэг компьютерийн дараалсан хувилбаруудад зориулсан. Snapshot дотор түүх, нотолгоо, өмнөх Markdown хувилбар зэрэг хувийн мэдээлэл бий; Git remote-ийн харагдах байдлыг хэрэглэгч сонгоно.
 
-Шинээр clone хийсэн, live DB байхгүй үед (L1/L2 нь Git-ээс ирсэн байх):
+Шинээр clone хийсэн, live DB байхгүй үед (L3/L2 нь Git-ээс ирсэн байх):
 
 ```bash
 cd Backend
 uv sync --frozen
-uv run mem restore-snapshot --snapshot ../L3/history.snapshot.sqlite3 --destination ../L3/history.sqlite3
+uv run mem restore-snapshot --snapshot ../L1/history.snapshot.sqlite3 --destination ../L1/history.sqlite3
 uv run mem --root .. reindex
 uv run mem --root .. verify
 ```
 
-`restore-snapshot` байгаа DB-г дарж бичихгүй. Git snapshot нь L3-ийн хувилбар, **бүх сангийн backup биш**: raw Inbox/ZIP нь Git default-д орохгүй.
+`restore-snapshot` байгаа DB-г дарж бичихгүй. Git snapshot нь L1-ийн хувилбар, **бүх сангийн backup биш**: raw Inbox/ZIP нь Git default-д орохгүй.
 
 ## Бүх санг нөөцлөх, сэргээх
 
@@ -87,7 +87,7 @@ uv run mem --root .. backup --output /absolute/outside-repo/mem-backup.zip
 uv run mem restore --backup /absolute/outside-repo/mem-backup.zip --destination /absolute/new-empty/Mem
 ```
 
-Backup нь L1/L2, live L3-ийн consistent copy, Inbox, бүх ZIP/архивын тайлбарыг checksum manifest-тай хадгална. Cache орохгүй, restore дээр rebuild хийнэ. Destination шинэ/хоосон байх ёстой. v0.1 backup-ийн өгөгдлийн хязгаар 1 GiB, restore member-ийн хязгаар 100,000. Off-device хуулбарыг өөрийн backup системд хадгална.
+Backup нь L3/L2, live L1-ийн consistent copy, Inbox, бүх ZIP/архивын тайлбарыг checksum manifest-тай хадгална. Cache орохгүй, restore дээр rebuild хийнэ. Destination шинэ/хоосон байх ёстой. v0.1 backup-ийн өгөгдлийн хязгаар 1 GiB, restore member-ийн хязгаар 100,000. Off-device хуулбарыг өөрийн backup системд хадгална.
 
 ## Тасалдал, зөрчил
 

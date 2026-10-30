@@ -16,12 +16,12 @@ from .helpers import sample_patch
 
 def test_backup_keeps_mem_prefix_documents_and_inbox(store, tmp_path):
     p = sample_patch()
-    p.documents[0].path = "L1/.mem-notes.md"
+    p.documents[0].path = "L3/.mem-notes.md"
     a = apply_patch(store, p)
     (store.root / "L0/Inbox/.mem-user-notes.md").write_bytes(b"user raw")
     backup = tmp_path / "full.zip"
     manifest = create_backup(store, backup)
-    assert "L1/.mem-notes.md" in manifest.files
+    assert "L3/.mem-notes.md" in manifest.files
     assert "L0/Inbox/.mem-user-notes.md" in manifest.files
     target = tmp_path / "restored"
     restore_backup(backup, target)
@@ -34,7 +34,7 @@ def test_backup_keeps_mem_prefix_documents_and_inbox(store, tmp_path):
 
 
 @pytest.mark.parametrize(
-    "second", ["L1/./projects.md", "L1//projects.md", "L1/projects.md/child.md"]
+    "second", ["L3/./projects.md", "L3//projects.md", "L3/projects.md/child.md"]
 )
 def test_path_alias_and_parent_conflicts_rejected_before_prepare(store, second):
     p = sample_patch()
@@ -46,7 +46,7 @@ def test_path_alias_and_parent_conflicts_rejected_before_prepare(store, second):
     with pytest.raises(MemoryError):
         apply_patch(store, p)
     assert store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 0
-    assert not list((store.root / "L1").iterdir())
+    assert not list((store.root / "L3").iterdir())
 
 
 def test_archive_checks_derived_zip_name_not_input_extension(store):
@@ -131,7 +131,7 @@ def test_whitespace_title_rejected_without_invalidating_store(store):
     with pytest.raises((MemoryError, ValueError)):
         apply_patch(store, p)
     assert store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 0
-    assert not list((store.root / "L1").iterdir())
+    assert not list((store.root / "L3").iterdir())
     assert apply_patch(store, sample_patch(key="valid")).state == "DONE"
 
 

@@ -5,14 +5,14 @@ from mem.paths import resolve_safe_path
 
 
 @pytest.mark.parametrize(
-    "path", ["../outside", "/tmp/out", "L1/../../out", "L1/x\\evil"]
+    "path", ["../outside", "/tmp/out", "L3/../../out", "L3/x\\evil"]
 )
 def test_escape_paths_rejected(store, path):
     with pytest.raises(MemoryError):
-        resolve_safe_path(store.root, path, "L1")
+        resolve_safe_path(store.root, path, "L3")
 
 
 def test_escaping_symlink_rejected(store, tmp_path):
-    (store.root / "L1/link").symlink_to(tmp_path)
+    (store.root / "L3/link").symlink_to(tmp_path)
     with pytest.raises(MemoryError):
-        resolve_safe_path(store.root, "L1/link/out.md", "L1")
+        resolve_safe_path(store.root, "L3/link/out.md", "L3")
