@@ -68,7 +68,13 @@ def _build(store, docs):
                 d.topic_ids,
                 d.title,
                 d.markdown,
-                dict(source_etag=d.sha256, record_status="active"),
+                dict(
+                    source_etag=d.sha256,
+                    record_status="active",
+                    linked_document_refs=[
+                        "mem://document/" + ident for ident in d.linked_document_ids
+                    ],
+                ),
             )
         meanings = get_shorthand(store)
         events = store.db.execute("SELECT id FROM events ORDER BY rowid").fetchall()
