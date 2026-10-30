@@ -183,6 +183,14 @@ def prepare_operation(store, patch):
             if requested_links is None:
                 linked_ids = previous.linked_document_ids if previous else []
             else:
+                for link_ref in requested_links:
+                    if (
+                        isinstance(link_ref, str)
+                        and link_ref.startswith("mem://document/")
+                        and link_ref[len("mem://document/"):]
+                        in catalog.ambiguous_ids
+                    ):
+                        raise MemoryError("CONFLICT", "Ambiguous linked document ID")
                 linked_ids = refs(
                     requested_links, "document", known_document_ids
                 )
