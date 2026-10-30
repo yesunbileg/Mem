@@ -80,7 +80,7 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
             "updated_at",
         } <= set(meta):
             raise ValueError("fields")
-        if meta["schema_version"] != 1:
+        if meta["schema_version"] not in (1, 2):
             raise ValueError("schema")
         ident = str(UUID(meta["document_id"]))
         if meta["layer"] not in ("L3", "L2") or path.split("/")[0] != meta["layer"]:
@@ -92,11 +92,24 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
             or any(str(UUID(t)) not in known_topics for t in topics)
         ):
             raise ValueError("topics")
-        links = meta.get("linked_document_ids", [])
+        if meta["schema_version"] == 2:
+            authored = meta.get("related_refs", [])
+            if not isinstance(authored, list):
+                raise ValueError("links")
+            links = []
+            for ref in authored:
+                if not isinstance(ref, str) or not ref.startswith("mem://document/"):
+                    raise ValueError("link type")
+                ident = ref[len("mem://document/"):]
+                if str(UUID(ident)) != ident:
+                    raise ValueError("link ID")
+                links.append(ident)
+        else:
+            links = meta.get("linked_document_ids", [])
         if (
             not isinstance(links, list)
             or len(set(links)) != len(links)
-            or any(str(UUID(item)) != item for item in links)
+            or any(not isinstance(item, str) or str(UUID(item)) != item for item in links)
         ):
             raise ValueError("links")
         if not isinstance(meta["title"], str) or not meta["title"].strip():
@@ -175,7 +188,7 @@ def render_document(ident, layer, topic_ids, title, body, linked_document_ids=No
 
     reject_credentials(title + "\n" + body)
     meta = dict(
-        schema_version=1,
+        schema_version=2,
         document_id=ident,
         layer=layer,
         topic_ids=topic_ids,
@@ -183,7 +196,9 @@ def render_document(ident, layer, topic_ids, title, body, linked_document_ids=No
         updated_at=now(),
     )
     if linked_document_ids:
-        meta["linked_document_ids"] = linked_document_ids
+        meta["related_refs"] = [
+            "mem://document/" + ident for ident in linked_document_ids
+        ]
     raw = (
         "---\n"
         + yaml.safe_dump(meta, allow_unicode=True, sort_keys=False)
