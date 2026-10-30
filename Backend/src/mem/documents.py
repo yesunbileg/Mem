@@ -99,10 +99,10 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
             for ref in authored:
                 if not isinstance(ref, str) or not ref.startswith("mem://document/"):
                     raise ValueError("link type")
-                ident = ref[len("mem://document/"):]
-                if str(UUID(ident)) != ident:
+                target_id = ref[len("mem://document/"):]
+                if str(UUID(target_id)) != target_id:
                     raise ValueError("link ID")
-                links.append(ident)
+                links.append(target_id)
         else:
             links = meta.get("linked_document_ids", [])
         if (
