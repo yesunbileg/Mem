@@ -25,6 +25,7 @@ class DocumentChange(Model):
     expected_sha256: str | None = None
     source_refs: list[str] = Field(default_factory=list)
     linked_document_refs: list[str] | None = None
+    related_refs: list[str] | None = None
 
     @model_validator(mode="after")
     def validate_change(self):
@@ -34,9 +35,10 @@ class DocumentChange(Model):
             not self.title
             or not self.layer
             or not self.topic_refs
-            or not self.source_refs
         ):
             raise ValueError("title, layer, topics and sources required")
+        if self.related_refs is not None and self.linked_document_refs is not None:
+            raise ValueError("choose related_refs or linked_document_refs")
         if len(self.markdown.encode()) > 1024 * 1024:
             raise ValueError("document too large")
         return self
