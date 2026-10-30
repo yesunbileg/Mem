@@ -38,10 +38,14 @@ def prepare_operation(store,patch):
             row=store.db.execute('SELECT revision FROM topics WHERE id=?',(ident,)).fetchone()
             if not row or row[0]!=t.expected_revision:raise MemoryError('CONFLICT','Topic changed')
         topic_ops.append(dict(id=ident,title=t.title,action=t.action))
-    sources=[]
+    sources=[];inbox_snapshots={}
     for draft in patch.sources:
-        if draft.kind=='inbox':raise MemoryError('VALIDATION_ERROR','Inbox processing not yet available')
-        source=capture_source(draft,None);source.source_id=ids[draft.ref];sources.append(asdict(source))
+        raw=None
+        if draft.kind=='inbox':
+            from .inbox import _read
+            item=_read(store,draft.relative_path,draft.expected_sha256)
+            inbox_snapshots[draft.relative_path]=(item,ids[draft.ref]);raw=item.raw_bytes
+        source=capture_source(draft,raw);source.source_id=ids[draft.ref];sources.append(asdict(source))
     known_sources={r[0] for r in store.db.execute('SELECT id FROM sources')}|{s['source_id'] for s in sources}
     def refs(values,kind,known):
         result=[resolve(r,kind) for r in values]
@@ -80,12 +84,33 @@ def prepare_operation(store,patch):
         value=e.model_dump();value.update(id=ids[e.ref],topic_ids=refs(e.topic_refs,'topic',topics),source_ids=refs(e.source_refs,'source',known_sources),corrects_event_id=target,recorded_at=now())
         events.append(value);known_events.add(value['id'])
         if target:targets.add(target)
-    if patch.close_inbox:raise MemoryError('VALIDATION_ERROR','Inbox processing not yet available')
+    archive_sources=[];archive_names=set();closed_paths=set()
+    for completion in patch.close_inbox:
+        from .inbox import _read
+        from .archive import validate_filename
+        item=_read(store,completion.relative_path,completion.expected_sha256)
+        validate_filename(completion.archive_filename,completion.relative_path)
+        if completion.archive_filename in archive_names or completion.relative_path in closed_paths:raise MemoryError('VALIDATION_ERROR','Duplicate archive destination/source')
+        archive_names.add(completion.archive_filename);closed_paths.add(completion.relative_path)
+        done=store.db.execute('SELECT archive_ref FROM processed_sources WHERE sha256=?',(item.sha256,)).fetchone()
+        pending=store.db.execute('SELECT 1 FROM operation_sources WHERE sha256=?',(item.sha256,)).fetchone()
+        if done or pending:raise MemoryError('SOURCE_ALREADY_PROCESSED','Source processed or pending',{'archive_ref':done[0] if done else None})
+        if completion.relative_path in inbox_snapshots:
+            _,sid=inbox_snapshots[completion.relative_path]
+        else:
+            sid=str(uuid4());ids['inbox:'+completion.relative_path]=sid
+            sources.append(dict(source_id=sid,kind='inbox',origin_ref=completion.relative_path,excerpt='',sha256=item.sha256))
+        linked=any(sid in e['source_ids'] for e in events) or any(sid in d['source_ids'] for d in docmeta)
+        if completion.outcome=='recorded' and not linked:raise MemoryError('VALIDATION_ERROR','Recorded source must support a change')
+        if completion.outcome=='no_memory' and (not completion.reason.strip() or linked):raise MemoryError('VALIDATION_ERROR','no_memory requires reason and no linked memory')
+        archive_sources.append(dict(source_id=sid,relative_path=item.relative_path,sha256=item.sha256,raw=item.raw_bytes,archive_filename=completion.archive_filename,outcome=completion.outcome,reason=completion.reason))
     total=sum(len(b or b'')+len(a or b'') for _,b,a in files)+len(patch.model_dump_json().encode())
+    total+=sum(len(a['raw']) for a in archive_sources)
     if total>50*1024*1024:raise MemoryError('VALIDATION_ERROR','Patch exceeds 50 MiB')
     result=ApplyResult(operation_id=opid,state='PREPARED',id_map=ids,document_etags=etags)
-    payload=dict(topics=topic_ops,sources=sources,events=events,documents=docmeta)
+    payload=dict(topics=topic_ops,sources=sources,events=events,documents=docmeta,prepared_at=now())
     with store.db:
         store.db.execute('INSERT INTO operations VALUES (?,?,?,?,?,?)',(opid,patch.idempotency_key,request_fingerprint(patch),json.dumps(payload,ensure_ascii=False),'PREPARED',result.model_dump_json()))
         for n,(path,before,after) in enumerate(files):store.db.execute('INSERT INTO operation_documents VALUES (?,?,?,?,?)',(opid,n,path,before,after))
+        for a in archive_sources:store.db.execute('INSERT INTO operation_sources VALUES (?,?,?,?,?,?,?,?,NULL)',(opid,a['source_id'],a['relative_path'],a['sha256'],a['raw'],a['archive_filename'],a['outcome'],a['reason']))
     return PreparedOperation(opid,result)
