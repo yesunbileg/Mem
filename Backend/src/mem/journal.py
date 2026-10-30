@@ -10,8 +10,8 @@ from .errors import MemoryError
 from .models import ApplyResult
 from .paths import resolve_safe_path
 from .read import split_ref
-from .sources import capture_source, reject_credentials
 from .shorthand import get_shorthand
+from .sources import capture_source, reject_credentials
 
 
 @dataclass
