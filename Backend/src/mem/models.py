@@ -160,6 +160,7 @@ class SearchHit(Model):
 class SearchPage(Model):
     items: list[SearchHit]
     index_revision: int
+    invalid_sources: list[str] = Field(default_factory=list)
 
 
 class IndexReport(Model):
