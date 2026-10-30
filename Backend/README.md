@@ -4,9 +4,11 @@ Python 3.12+, SQLite FTS5, official MCP Python SDK, Pydantic 2, PyYAML, filelock
 
 ## Түвшний семантик
 
-L0 — түүхий эх, боловсруулсны дараах ZIP архив; L1 — батлагдсан
-action/result/test/correction-ийн SQLite түүх; L2 — сэдвийн зорилго,
-шийдвэр, контекст; L3 — нэг мөрийн өндөр ач холбогдолтой баримт.
+L0 — түүхий эх болон гараар үзэх ZIP архив; L1 — conversation,
+question, answer, proposal, action, result, test, correction-ийн дэлгэрэнгүй
+SQLite түүх; L2 — сэдвийн контекст; L3 — хамгийн чухал товч мэдээлэл.
+L2↔L3 нь нэг сэдэвт, хоёр чиглэлтэй `linked_document_refs`-ээр холбогдоно.
+L1 болон эх архивыг Markdown хоорондын холбоос болгон оруулахгүй.
 FTS5 индекс нь тусдаа disposable SQLite cache бөгөөд L1 history DB биш.
 Хуучин layout-ийн `migrate-layers` командыг үндсэн README-д тайлбарласан.
 
@@ -22,7 +24,7 @@ FTS5 индекс нь тусдаа disposable SQLite cache бөгөөд L1 hist
 | `memory_reindex` | canonical эхийг өөрчлөхгүйгээр cache-ийг сэргээнэ |
 | `memory_health` | canonical integrity, cache warning, pending operation |
 
-Literal үгийн AND хайлт хэрэглэнэ; semantic search, Монгол үгийн хувилал/латин галигийг автоматаар тэлэхгүй. Ө/О, Ү/У нь өөр үсэг. Raw Inbox/ZIP болон техникийн document revisions default хайлтад орохгүй. Source ref-ээр архивласан эхийг уншиж болно.
+Literal үгийн AND хайлт хэрэглэнэ; semantic search, Монгол үгийн хувилал/латин галигийг автоматаар тэлэхгүй. Ө/О, Ү/У нь өөр үсэг. Raw Inbox/ZIP болон техникийн document revisions default хайлтад орохгүй. Source ref нь архивын байрлалын metadata буцаана, ZIP-ийг автоматаар нээхгүй.
 
 ## Patch жишээ
 
@@ -58,3 +60,12 @@ Document 1 MiB, Inbox 10 MiB UTF-8, excerpt 64 KiB, patch 20 documents/100 event
 `health` cache missing/stale warning-тай ч canonical data healthy бол ready байж болно. PREPARED operation/conflict нь хэвийн read/write-ийг блоклоно. `verify` нь archive checksum ба DB integrity-г гүн шалгана. `recover`-ийг өөрийн writer process-ийг хаасны дараа ажиллуулна.
 
 Git/backup/startup командууд [үндсэн README](../README.md)-д байна. Backend stdout нь serve үед зөвхөн MCP protocol, log stderr. HTTP listener, automatic timer, shell execution, external fetch, Git commit байхгүй.
+
+
+## Дэлгэрэнгүй түүх, хоёр талын холбоос, товчлол
+
+- L1-ийн `kind=question|answer|conversation|proposal` нь яриа, асуулт, хариулт, саналыг тус тусад нь хадгална. Зөвхөн гүйцэтгэсэн ажлыг `action/result/test` гэж бүртгэнэ.
+- L2/L3 DocumentChange дээр `linked_document_refs`-ээр эсрэг түвшний document ref-ийг зааж, хоёр баримтыг нэг patch-д харилцан холбоно. Холбоосууд ижил topic-тай байх ёстой. Нэг талын холбоосыг backend няцаана.
+- `MemoryPatch.shorthand` нь тодорхой нэг prefix-д баригдахгүй. Жишээ: `[{"code":"$scp","expansion":"stage commit push"},{"code":"&","expansion":"and marker"}]`. Товчлолыг өөрчлөх/устгахад `expected_expansion` нь өмнөх утгатай таарах ёстой. Код болон түүний бүтэн тайлбараар L1 хайлт ажиллана.
+
+Эдгээр нь backend-ийн дэмжлэг; орж ирсэн яриаг автоматаар memory болгон хувиргах watcher байхгүй.
