@@ -8,3 +8,6 @@ L0/Inbox/**
 L0/Archive/**/*.zip
 L3/*.sqlite3*
 !L3/history.snapshot.sqlite3
+
+Backend/dist/
+.ruff_cache/

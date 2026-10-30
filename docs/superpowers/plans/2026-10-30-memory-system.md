@@ -10,7 +10,7 @@
 
 **Spec:** [Mem design v0.2](../specs/2026-10-30-memory-system-design.md). Executor хоёр баримтыг хамтад нь уншина.
 
-**Төлөв:** Зөвхөн төлөвлөгөө. Доорх команд, тест, кодын нэр нь ирээдүйн ажлын заавар; ажиллуулсан/хийсэн гэж тооцохгүй. Хэрэглэгч энэ turn-д implementation хүсээгүй.
+**Төлөв:** 2026-10-30 хэрэглэгч main дээр хэрэгжүүлэхийг зөвшөөрсөн. Доорх нь анхны төлөвлөгөө; бодит үр дүн, өөрчлөлтийг docs/memory-acceptance.md болон implementation update-ээс харна.
 
 ## Global Constraints
 
@@ -253,8 +253,10 @@ Task 3-ийн дараа Checkpoint A, Task 6-ийн дараа Checkpoint B, Ta
 - [x] Builder check-ийн session provenance ба external revision history гэсэн хоёр дутуу бодлогыг spec-д санал болгосон шийдвэрээр тодруулсан.
 - [x] App code, install, runtime service, product test, commit/push хийгдээгүй; зөвхөн design/plan баримт бичиг.
 
-Дараагийн implementation нь хэрэглэгчийн тусдаа хүсэлтээр эхэлнэ. Эхлэхдээ энэ draft-ийн OS/client болон санал болгосон жижиг сонголтуудыг тухайн орчинтой тулгаж шинэчилнэ; энэ turn-д execution mode сонгох шаардлагагүй.
+Implementation main дээр executing-plans урсгалаар эхэлсэн. Linux + official MCP stdio SDK client-ээр шалгаж байна; хэрэглэгчийн desktop client дээрх hookup нь тусдаа runtime шалгалт.
 
 ## Implementation update
 
 2026-10-30: user authorized implementation on main. Task 7 adds `mem snapshot` (consistent L3 → tracked `L3/history.snapshot.sqlite3`) and explicit snapshot restore, with immutable data/integrity tests. No automatic backend Git commits or pushes.
+
+2026-10-30 implementation: schema migration packaged at `Backend/src/mem/migrations` for wheel compatibility; raw operation snapshots cleared after verified archive; archive names checked case-insensitively; complete backups bounded at 1 GiB/100,000 members. Actual SDK stdio integration needs local socketpair permission in this cloud sandbox. Semantic agent policy checked with baseline/guided scenarios, not text-grep tests.
