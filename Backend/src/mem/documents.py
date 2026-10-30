@@ -7,7 +7,6 @@ from uuid import UUID
 import yaml
 
 from .errors import MemoryError
-from .paths import resolve_safe_path
 
 
 class UniqueLoader(yaml.SafeLoader):
