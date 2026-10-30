@@ -66,12 +66,6 @@ def read_memory(store, ref):
             if not row:
                 raise MemoryError("NOT_FOUND", "Source not found")
             data = dict(row)
-            if data["archive_ref"]:
-                from .archive import read_archived_source
-
-                data["text"] = read_archived_source(store, data["archive_ref"]).decode(
-                    "utf-8"
-                )
         return ReadResult(
             ref=ref,
             kind=kind,
