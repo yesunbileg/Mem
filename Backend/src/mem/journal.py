@@ -116,6 +116,10 @@ def prepare_operation(store, patch):
             raise MemoryError("VALIDATION_ERROR", "Unknown or duplicate linked ref")
         return result
 
+    known_document_ids = set(byid) | {
+        ids[d.ref] for d in patch.documents if d.action == "create"
+    }
+    future_documents = dict(byid)
     files = []
     docmeta = []
     etags = {}
@@ -165,10 +169,21 @@ def prepare_operation(store, patch):
         if d.action == "move":
             raw = previous.raw
         else:
+            if d.linked_document_refs is None:
+                linked_ids = previous.linked_document_ids if previous else []
+            else:
+                linked_ids = refs(
+                    d.linked_document_refs, "document", known_document_ids
+                )
             raw = render_document(
-                ident, layer, refs(d.topic_refs, "topic", topics), d.title, d.markdown
+                ident,
+                layer,
+                refs(d.topic_refs, "topic", topics),
+                d.title,
+                d.markdown,
+                linked_document_ids=linked_ids,
             )
-        parse_document(raw, d.path, topics)
+        future_documents[ident] = parse_document(raw, d.path, topics)
         before = previous.raw if previous and previous.path == d.path else None
         files.append((d.path, before, raw))
         if d.action == "move" and previous.path != d.path:
@@ -181,6 +196,19 @@ def prepare_operation(store, patch):
             )
         )
         etags[ident] = digest(raw)
+    for document in future_documents.values():
+        for target_id in document.linked_document_ids:
+            peer = future_documents.get(target_id)
+            if (
+                peer is None
+                or peer.layer == document.layer
+                or not set(document.topic_ids).intersection(peer.topic_ids)
+                or document.document_id not in peer.linked_document_ids
+            ):
+                raise MemoryError(
+                    "VALIDATION_ERROR",
+                    "L2/L3 links must be reciprocal, cross-layer, and share a topic",
+                )
     events = []
     known_events = {r[0] for r in store.db.execute("SELECT id FROM events")}
     targets = {
