@@ -20,6 +20,8 @@ class InboxPage:
 
 
 def _read(store, relative_path, expected_sha256=None):
+    if relative_path == "L0/Inbox/.gitkeep":
+        raise MemoryError("VALIDATION_ERROR", "Directory marker is not an Inbox source")
     path = resolve_safe_path(store.root, relative_path, "L0/Inbox")
     if not path.is_file():
         raise MemoryError("NOT_FOUND", "Inbox file not found")
@@ -53,6 +55,8 @@ def list_inbox(store, cursor=None, limit=20):
         for path in sorted((store.root / "L0/Inbox").rglob("*")):
             if path.is_file():
                 rel = path.relative_to(store.root).as_posix()
+                if rel == "L0/Inbox/.gitkeep":
+                    continue
                 if cursor and rel <= cursor:
                     continue
                 item = _read(store, rel)

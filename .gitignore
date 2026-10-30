@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 Backend/.state/
 L0/Inbox/**
+!L0/Inbox/.gitkeep
 L0/Archive/**/*.zip
 L3/*.sqlite3*
 !L3/history.snapshot.sqlite3

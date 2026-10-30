@@ -55,3 +55,7 @@ App нь memory-ийн ач холбогдол/үнэн эсэхийг дан к
 - Minor finding deferred хийгээгүй.
 
 Environment install/start instructions draft-д хадгалагдсан, install script одоогийн instance дээр амжилттай ажилласан. Draft save нь publish биш; environment settings-д review/save/publish хэрэглэгчийн flow-оор хийгдэнэ.
+
+## Clone дахь хавтасны засвар
+
+2026-10-30: Git хоосон хавтас хадгалдаггүй тул `L1`, `L2`, `L0/Inbox`-д tracked `.gitkeep` нэмэв. Inbox marker-ийг raw source гэж list/read хийхгүй; бодит Inbox файлууд ignored хэвээр. Хоёр regression test RED→GREEN. Бүтэн suite: **80 passed, 4.19s**; Ruff lint pass.
