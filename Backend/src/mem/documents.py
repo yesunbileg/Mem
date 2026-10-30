@@ -57,7 +57,7 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
     try:
         if len(raw) > 1024 * 1024:
             raise ValueError("size")
-        text = raw.decode("utf-8")
+        text = raw.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n")
         if not text.startswith("---\n"):
             raise ValueError("frontmatter")
         head, body = text[4:].split("\n---\n", 1)
@@ -67,14 +67,14 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
         ):
             raise ValueError("alias")
         meta = yaml.load(head, Loader=UniqueLoader)
-        if not isinstance(meta, dict) or set(meta) != {
+        if not isinstance(meta, dict) or not {
             "schema_version",
             "document_id",
             "layer",
             "topic_ids",
             "title",
             "updated_at",
-        }:
+        } <= set(meta):
             raise ValueError("fields")
         if meta["schema_version"] != 1:
             raise ValueError("schema")
@@ -120,21 +120,41 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
         ) from None
 
 
-def load_documents(store):
+def load_documents(store, *, tolerate_invalid=False, include_issues=False):
+    """Load canonical documents, optionally isolating bad files instead of failing globally.
+
+    Invalid files remain untouched on disk. Callers can inspect issues and avoid
+    publishing a backup until those files have been repaired.
+    """
     known = {r[0] for r in store.db.execute("SELECT id FROM topics")}
     docs = []
     seen = set()
-    for layer in ["L1", "L2"]:
+    issues = []
+    for layer in ("L1", "L2"):
         for path in sorted((store.root / layer).rglob("*.md")):
             rel = path.relative_to(store.root).as_posix()
-            safe = resolve_safe_path(store.root, rel, layer)
-            doc = parse_document(safe.read_bytes(), rel, known)
-            if doc.document_id in seen:
-                raise MemoryError(
-                    "INDEX_INVALID", "Duplicate document ID", {"path": rel}
+            try:
+                safe = resolve_safe_path(store.root, rel, layer)
+                doc = parse_document(safe.read_bytes(), rel, known)
+                if doc.document_id in seen:
+                    raise MemoryError(
+                        "INDEX_INVALID", "Duplicate document ID", {"path": rel}
+                    )
+                seen.add(doc.document_id)
+                docs.append(doc)
+            except (MemoryError, OSError) as exc:
+                if not tolerate_invalid:
+                    raise
+                issues.append(
+                    dict(
+                        code=getattr(exc, "code", "IO_ERROR"),
+                        severity="error",
+                        path=rel,
+                        message=getattr(exc, "message", "Unable to read document"),
+                    )
                 )
-            seen.add(doc.document_id)
-            docs.append(doc)
+    if include_issues:
+        return docs, issues
     return docs
 
 
