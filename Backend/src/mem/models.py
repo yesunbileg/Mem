@@ -179,6 +179,7 @@ class SearchHit(Model):
     latest_correction_ref: str | None = None
     effective_summary: str | None = None
     evidence_kind: str | None = None
+    linked_document_refs: list[str] = Field(default_factory=list)
 
 
 class SearchPage(Model):
