@@ -11,6 +11,7 @@ from .models import ApplyResult
 from .paths import resolve_safe_path
 from .read import split_ref
 from .sources import capture_source, reject_credentials
+from .shorthand import get_shorthand
 
 
 @dataclass
@@ -72,6 +73,26 @@ def prepare_operation(store, patch):
             if not row or row[0] != t.expected_revision:
                 raise MemoryError("CONFLICT", "Topic changed")
         topic_ops.append(dict(id=ident, title=t.title, action=t.action))
+    shorthand = get_shorthand(store)
+    shorthand_ops = []
+    changed_codes = set()
+    for change in patch.shorthand:
+        code = change.code
+        if code in changed_codes:
+            raise MemoryError("VALIDATION_ERROR", "Duplicate shorthand code")
+        changed_codes.add(code)
+        old = shorthand.get(code)
+        if old != change.expected_expansion or (
+            change.action == "remove" and old is None
+        ):
+            raise MemoryError("CONFLICT", "Shorthand meaning changed")
+        reject_credentials(code + "\n" + (change.expansion or ""))
+        if change.action == "set":
+            shorthand[code] = change.expansion
+        else:
+            del shorthand[code]
+        shorthand_ops.append(change.model_dump())
+
     sources = []
     inbox_snapshots = {}
     for draft in patch.sources:
@@ -272,6 +293,7 @@ def prepare_operation(store, patch):
     )
     payload = dict(
         topics=topic_ops,
+        shorthand=shorthand_ops,
         sources=sources,
         events=events,
         documents=docmeta,
