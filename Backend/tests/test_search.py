@@ -83,12 +83,12 @@ def test_query_syntax_is_literal(store):
     assert not search_memory(store, SearchRequest(query="smoke OR nonexistent")).items
 
 
-def test_invalid_source_blocks_complete_results(store):
-    apply_patch(store, sample_patch())
-    search_memory(store, SearchRequest(query="smoke"))
+def test_invalid_source_isolated_without_hiding_valid_results(store):
+    a = apply_patch(store, sample_patch())
     (store.root / "L1/bad.md").write_text("not a valid document")
-    with pytest.raises(MemoryError, match="INDEX_INVALID"):
-        search_memory(store, SearchRequest(query="smoke"))
+    result = search_memory(store, SearchRequest(query="smoke"))
+    assert "L1/bad.md" in result.invalid_sources
+    assert "mem://document/" + a.id_map["new:d"] in {h.ref for h in result.items}
 
 
 def test_filters_and_deleted_document(store):
