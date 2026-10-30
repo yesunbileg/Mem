@@ -72,6 +72,20 @@ def commit_operation(store, operation):
                     "UPDATE topics SET title=?,revision=revision+1 WHERE id=?",
                     (t["title"], t["id"]),
                 )
+        if payload.get("shorthand"):
+            from .shorthand import get_shorthand
+
+            shorthand = get_shorthand(store)
+            for change in payload["shorthand"]:
+                if change["action"] == "set":
+                    shorthand[change["code"]] = change["expansion"]
+                else:
+                    shorthand.pop(change["code"], None)
+            store.db.execute(
+                "INSERT INTO metadata(key,value) VALUES('shorthand',?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (json.dumps(shorthand, ensure_ascii=False, sort_keys=True),),
+            )
         for s in payload["sources"]:
             store.db.execute(
                 "INSERT INTO sources VALUES (?,?,?,?,?,NULL)",
