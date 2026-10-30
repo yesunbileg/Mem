@@ -77,7 +77,7 @@ def _build(store, docs):
             corrected = latest["id"] != e["id"]
             add(
                 "mem://event/" + e["id"],
-                "L3",
+                "L1",
                 e["topic_ids"],
                 e["summary"],
                 e["details"],
@@ -116,13 +116,21 @@ def _build(store, docs):
 def rebuild_index(store):
     with store.mutex:
         store.ensure_ready()
-        return _build(store, load_documents(store))
+        docs, issues = load_documents(
+            store, tolerate_invalid=True, include_issues=True
+        )
+        report = _build(store, docs)
+        report.invalid_sources = [i["path"] for i in issues]
+        return report
 
 
 def ensure_index_current(store):
     with store.mutex:
         store.ensure_ready()
-        docs = load_documents(store)
+        docs, issues = load_documents(
+            store, tolerate_invalid=True, include_issues=True
+        )
+        invalid_paths = [i["path"] for i in issues]
         path = _path(store)
         stamp = None
         try:
@@ -132,9 +140,12 @@ def ensure_index_current(store):
         except (sqlite3.DatabaseError, TypeError):
             pass
         if stamp != source_stamp(store, docs):
-            return _build(store, docs)
+            report = _build(store, docs)
+            report.invalid_sources = invalid_paths
+            return report
         return IndexReport(
             documents=len(docs),
             events=store.db.execute("SELECT count(*) FROM events").fetchone()[0],
             source_revision=source_revision(store),
+            invalid_sources=invalid_paths,
         )

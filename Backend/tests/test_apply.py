@@ -42,10 +42,10 @@ def replacement(result, key="replace"):
                 dict(
                     action="replace",
                     ref="mem://document/" + result.id_map["new:d"],
-                    layer="L1",
+                    layer="L3",
                     topic_refs=["mem://topic/" + result.id_map["new:t"]],
                     title="New goal",
-                    path="L1/projects.md",
+                    path="L3/projects.md",
                     markdown="Шинэ зорилго",
                     expected_sha256=result.document_etags[result.id_map["new:d"]],
                     source_refs=["new:s"],
@@ -57,18 +57,18 @@ def replacement(result, key="replace"):
 
 def test_old_document_bytes_preserved(store):
     a = apply_patch(store, sample_patch())
-    old = (store.root / "L1/projects.md").read_bytes()
+    old = (store.root / "L3/projects.md").read_bytes()
     apply_patch(store, replacement(a))
     row = store.db.execute(
         "SELECT before_bytes FROM document_revisions WHERE before_bytes IS NOT NULL"
     ).fetchone()
     assert row[0] == old
-    assert "Шинэ зорилго" in (store.root / "L1/projects.md").read_text()
+    assert "Шинэ зорилго" in (store.root / "L3/projects.md").read_text()
 
 
 def test_changed_etag_does_not_overwrite(store):
     a = apply_patch(store, sample_patch())
-    p = store.root / "L1/projects.md"
+    p = store.root / "L3/projects.md"
     p.write_bytes(p.read_bytes() + b"\nmanual edit")
     changed = p.read_bytes()
     with pytest.raises(MemoryError, match="CONFLICT"):
@@ -90,7 +90,7 @@ def test_validation_has_no_partial_writes(store):
     p.documents[0].topic_refs = ["mem://topic/77777777-7777-4777-8777-777777777777"]
     with pytest.raises(MemoryError):
         apply_patch(store, p)
-    assert list((store.root / "L1").iterdir()) == []
+    assert list((store.root / "L3").iterdir()) == []
     assert count_events(store) == 0
     assert store.db.execute("SELECT count(*) FROM topics").fetchone()[0] == 0
     assert store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 0
@@ -99,19 +99,19 @@ def test_validation_has_no_partial_writes(store):
 def test_move_retains_identity_and_conflicting_destination_fails(store):
     a = apply_patch(store, sample_patch())
     ident = a.id_map["new:d"]
-    old = (store.root / "L1/projects.md").read_bytes()
+    old = (store.root / "L3/projects.md").read_bytes()
     p = MemoryPatch(
         idempotency_key="move",
         documents=[
             dict(
                 action="move",
                 ref="mem://document/" + ident,
-                path="L1/төслүүд.md",
+                path="L3/төслүүд.md",
                 expected_sha256=hashlib.sha256(old).hexdigest(),
             )
         ],
     )
     apply_patch(store, p)
-    assert read_memory(store, "mem://document/" + ident).data["path"] == "L1/төслүүд.md"
-    assert not (store.root / "L1/projects.md").exists()
-    assert (store.root / "L1/төслүүд.md").read_bytes() == old
+    assert read_memory(store, "mem://document/" + ident).data["path"] == "L3/төслүүд.md"
+    assert not (store.root / "L3/projects.md").exists()
+    assert (store.root / "L3/төслүүд.md").read_bytes() == old

@@ -1,0 +1,30 @@
+name: Mem tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Sync locked dependencies
+        working-directory: Backend
+        run: uv sync --frozen --group dev
+      - name: Lint
+        working-directory: Backend
+        run: uv run ruff check .
+      - name: Format working tree before tests
+        working-directory: Backend
+        run: uv run ruff format .
+      - name: Tests
+        working-directory: Backend
+        run: uv run pytest -q

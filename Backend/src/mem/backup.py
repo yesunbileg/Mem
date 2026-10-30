@@ -55,7 +55,7 @@ def _sqlite_copy(source_db, destination):
 def create_snapshot(store):
     with store.mutex:
         _ready(store)
-        destination = resolve_safe_path(store.root, "L3/history.snapshot.sqlite3", "L3")
+        destination = resolve_safe_path(store.root, "L1/history.snapshot.sqlite3", "L1")
         fd, temp = tempfile.mkstemp(dir=destination.parent, suffix=".sqlite3")
         os.close(fd)
         try:
@@ -98,7 +98,7 @@ def restore_snapshot(snapshot_path, destination):
 
 def _inventory(store):
     result = {}
-    for area in ["L1", "L2", "L0/Inbox", "L0/Archive"]:
+    for area in ["L3", "L2", "L0/Inbox", "L0/Archive"]:
         for path in sorted((store.root / area).rglob("*")):
             rel = path.relative_to(store.root).as_posix()
             path = resolve_safe_path(store.root, rel, area)
@@ -125,7 +125,7 @@ def create_backup(store, destination):
             dbfile = stage / "history.sqlite3"
             _sqlite_copy(store.db, dbfile)
             inventory = _inventory(store)
-            hashes = {"L3/history.sqlite3": digest(dbfile.read_bytes()), **inventory}
+            hashes = {"L1/history.sqlite3": digest(dbfile.read_bytes()), **inventory}
             manifest = BackupManifest(1, source_revision(store), now(), hashes)
             output = stage / "backup.zip"
             total = dbfile.stat().st_size
@@ -139,7 +139,7 @@ def create_backup(store, destination):
             if len(manifest_bytes) > MAX_MANIFEST_BYTES:
                 raise MemoryError("VALIDATION_ERROR", "Backup manifest exceeds limit")
             with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as z:
-                z.write(dbfile, "L3/history.sqlite3")
+                z.write(dbfile, "L1/history.sqlite3")
                 for rel, sha in inventory.items():
                     raw = (store.root / rel).read_bytes()
                     total += len(raw)
@@ -178,8 +178,8 @@ def _validate_member(name):
         or str(PurePosixPath(name)) != name
     ):
         raise MemoryError("VALIDATION_ERROR", "Unsafe backup member")
-    allowed = name == "L3/history.sqlite3" or any(
-        name.startswith(p) for p in ["L1/", "L2/", "L0/Inbox/", "L0/Archive/"]
+    allowed = name == "L1/history.sqlite3" or any(
+        name.startswith(p) for p in ["L3/", "L2/", "L0/Inbox/", "L0/Archive/"]
     )
     if not allowed:
         raise MemoryError("VALIDATION_ERROR", "Unsupported backup member")
@@ -228,7 +228,7 @@ def restore_backup(backup_path, destination):
             hashes = manifest["files"]
             if (
                 set(z.namelist()) != set(hashes) | {"manifest.json"}
-                or "L3/history.sqlite3" not in hashes
+                or "L1/history.sqlite3" not in hashes
             ):
                 raise MemoryError("INTEGRITY_ERROR", "Manifest incomplete")
             for name, sha in hashes.items():

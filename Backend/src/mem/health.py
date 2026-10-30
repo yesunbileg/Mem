@@ -15,10 +15,19 @@ def get_health(store, deep=False):
             for r in store.db.execute("SELECT id FROM operations WHERE state!='DONE'")
         ]
         try:
-            docs = load_documents(store)
+            docs, invalid_issues = load_documents(
+                store, tolerate_invalid=True, include_issues=True
+            )
+            issues.extend(invalid_issues)
         except (MemoryError, OSError) as e:
             docs = []
-            issues.append(dict(code=getattr(e, "code", "IO_ERROR"), severity="error"))
+            issues.append(
+                dict(
+                    code=getattr(e, "code", "IO_ERROR"),
+                    severity="error",
+                    details=getattr(e, "details", {}),
+                )
+            )
         check = "integrity_check" if deep else "quick_check"
         if (
             store.db.execute("PRAGMA " + check).fetchone()[0] != "ok"

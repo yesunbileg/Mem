@@ -7,8 +7,8 @@ CORRECTION = "44444444-4444-4444-8444-444444444444"
 def seed_document(store):
     store.db.execute("INSERT INTO topics VALUES (?,?,1)", (TOPIC, "Mem"))
     store.db.commit()
-    data = f'---\nschema_version: 1\ndocument_id: {DOC}\nlayer: L1\ntopic_ids: [{TOPIC}]\ntitle: Devices\nupdated_at: "2026-10-30T00:00:00+00:00"\n---\nӨгөгдөл Үр дүн Ёс SQLite smoke\n'.encode()
-    (store.root / "L1/devices.md").write_bytes(data)
+    data = f'---\nschema_version: 1\ndocument_id: {DOC}\nlayer: L3\ntopic_ids: [{TOPIC}]\ntitle: Devices\nupdated_at: "2026-10-30T00:00:00+00:00"\n---\nӨгөгдөл Үр дүн Ёс SQLite smoke\n'.encode()
+    (store.root / "L3/devices.md").write_bytes(data)
     return data
 
 
@@ -30,10 +30,10 @@ def sample_patch(key="write-1"):
             documents=[
                 dict(
                     ref="new:d",
-                    layer="L1",
+                    layer="L3",
                     topic_refs=["new:t"],
                     title="Mem project",
-                    path="L1/projects.md",
+                    path="L3/projects.md",
                     markdown="Өгөгдөл Үр дүн Ёс SQLite smoke",
                     source_refs=["new:s"],
                 )

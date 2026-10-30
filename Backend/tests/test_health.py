@@ -10,7 +10,7 @@ def test_cache_problem_not_canonical_data_loss(store):
     assert get_health(store).ready
     assert any(i["code"] == "INDEX_MISSING" for i in get_health(store).issues)
     apply_patch(store, sample_patch())
-    (store.root / "L1/invalid.md").write_text("broken")
+    (store.root / "L3/invalid.md").write_text("broken")
     assert not get_health(store, deep=True).ready
 
 

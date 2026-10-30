@@ -35,7 +35,7 @@ def test_rebuild_from_markdown_and_l3(store):
 def test_external_edit_visible_next_search(store):
     a = apply_patch(store, sample_patch())
     search_memory(store, SearchRequest(query="smoke"))
-    path = store.root / "L1/projects.md"
+    path = store.root / "L3/projects.md"
     path.write_bytes(path.read_bytes() + "\nшинээр".encode())
     assert (
         search_memory(store, SearchRequest(query="шинээр")).items[0].ref
@@ -83,23 +83,23 @@ def test_query_syntax_is_literal(store):
     assert not search_memory(store, SearchRequest(query="smoke OR nonexistent")).items
 
 
-def test_invalid_source_blocks_complete_results(store):
-    apply_patch(store, sample_patch())
-    search_memory(store, SearchRequest(query="smoke"))
-    (store.root / "L1/bad.md").write_text("not a valid document")
-    with pytest.raises(MemoryError, match="INDEX_INVALID"):
-        search_memory(store, SearchRequest(query="smoke"))
+def test_invalid_source_isolated_without_hiding_valid_results(store):
+    a = apply_patch(store, sample_patch())
+    (store.root / "L3/bad.md").write_text("not a valid document")
+    result = search_memory(store, SearchRequest(query="smoke"))
+    assert "L3/bad.md" in result.invalid_sources
+    assert "mem://document/" + a.id_map["new:d"] in {h.ref for h in result.items}
 
 
 def test_filters_and_deleted_document(store):
     a = apply_patch(store, sample_patch())
     hits = search_memory(
         store,
-        SearchRequest(query="smoke", layers=["L3"], topic_ids=[a.id_map["new:t"]]),
+        SearchRequest(query="smoke", layers=["L1"], topic_ids=[a.id_map["new:t"]]),
     ).items
-    assert len(hits) == 1 and hits[0].layer == "L3"
-    (store.root / "L1/projects.md").unlink()
+    assert len(hits) == 1 and hits[0].layer == "L1"
+    (store.root / "L3/projects.md").unlink()
     assert all(
-        h.layer == "L3"
+        h.layer == "L1"
         for h in search_memory(store, SearchRequest(query="smoke")).items
     )

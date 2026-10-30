@@ -10,7 +10,7 @@ from .locking import acquire_lock
 class Store:
     def __init__(self, root, db, lock):
         self.root, self.db, self.lock = root, db, lock
-        self.db_path = root / "L3/history.sqlite3"
+        self.db_path = root / "L1/history.sqlite3"
         self.index_path = root / "Backend/.state/search.sqlite3"
         self.mutex = threading.RLock()
 
@@ -41,12 +41,21 @@ class Store:
 
 def _connect(root, create):
     root = Path(root).resolve()
-    dbpath = root / "L3/history.sqlite3"
+    dbpath = root / "L1/history.sqlite3"
+    legacy_db = root / "L3/history.sqlite3"
+    legacy_snapshot = root / "L3/history.snapshot.sqlite3"
+    legacy_markdown = (root / "L1").exists() and any((root / "L1").rglob("*.md"))
+    if legacy_db.exists() or legacy_snapshot.exists() or legacy_markdown:
+        raise MemoryError(
+            "SCHEMA_UNSUPPORTED",
+            "Legacy L1 Markdown / L3 SQLite layout detected; run mem migrate-layers",
+            {"source": str(root)},
+        )
     if not create and not dbpath.is_file():
         raise MemoryError("NOT_FOUND", "Store not initialized")
     if not create and dbpath.stat().st_size == 0:
         raise MemoryError("SCHEMA_UNSUPPORTED")
-    for rel in ["Backend/.state", "L3", "L1", "L2", "L0/Inbox", "L0/Archive"]:
+    for rel in ["Backend/.state", "L1", "L3", "L2", "L0/Inbox", "L0/Archive"]:
         p = root / rel
         if not p.resolve().is_relative_to(root):
             raise MemoryError("VALIDATION_ERROR", "Store path escapes root")

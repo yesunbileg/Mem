@@ -57,7 +57,7 @@ def test_recovery_conflict_preserves_external_bytes(store):
     from mem.recovery import recover_pending
 
     prepare_operation(store, sample_patch())
-    path = store.root / "L1/projects.md"
+    path = store.root / "L3/projects.md"
     path.write_bytes(b"external file")
     report = recover_pending(store)
     assert len(report.conflicts) == 1

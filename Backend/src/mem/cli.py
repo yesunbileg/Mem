@@ -27,13 +27,21 @@ def main():
     restore = subs.add_parser("restore")
     restore.add_argument("--backup", type=Path, required=True)
     restore.add_argument("--destination", type=Path, required=True)
+    migration = subs.add_parser("migrate-layers")
+    migration.add_argument("--source", type=Path, required=True)
+    migration.add_argument("--destination", type=Path, required=True)
     rs = subs.add_parser("restore-snapshot")
     rs.add_argument("--snapshot", type=Path, required=True)
     rs.add_argument("--destination", type=Path, required=True)
     args = parser.parse_args()
-    if not args.root and args.command not in ("restore", "restore-snapshot"):
+    if not args.root and args.command not in ("restore", "restore-snapshot", "migrate-layers"):
         parser.error("--root is required")
     try:
+        if args.command == "migrate-layers":
+            from .legacy_migration import migrate_legacy_store
+
+            output(migrate_legacy_store(args.source, args.destination))
+            return 0
         if args.command in ("restore", "restore-snapshot"):
             from .backup import restore_backup, restore_snapshot
 

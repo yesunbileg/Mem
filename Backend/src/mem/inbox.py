@@ -47,29 +47,62 @@ def read_inbox(store, relative_path, expected_sha256):
 
 
 def list_inbox(store, cursor=None, limit=20):
+    """List regular Inbox files without requiring text decoding.
+
+    Pagination is based on the final result's path rather than the look-ahead
+    item, so nested paths cannot be skipped between pages.
+    """
     with store.mutex:
         store.ensure_ready()
         if not 1 <= limit <= 100:
             raise MemoryError("VALIDATION_ERROR", "Invalid limit")
         items = []
-        for path in sorted((store.root / "L0/Inbox").rglob("*")):
-            if path.is_file():
-                rel = path.relative_to(store.root).as_posix()
-                if rel == "L0/Inbox/.gitkeep":
+        paths = sorted(
+            (p.relative_to(store.root).as_posix(), p)
+            for p in (store.root / "L0/Inbox").rglob("*")
+            if p.is_file() or p.is_symlink()
+        )
+        for rel, path in paths:
+            if rel == "L0/Inbox/.gitkeep" or (cursor and rel <= cursor):
+                continue
+            try:
+                safe = resolve_safe_path(store.root, rel, "L0/Inbox")
+                if not safe.is_file():
                     continue
-                if cursor and rel <= cursor:
-                    continue
-                item = _read(store, rel)
-                items.append(
-                    dict(
+                size = safe.stat().st_size
+                if size > 10 * 1024 * 1024:
+                    item = dict(
                         relative_path=rel,
-                        size_bytes=item.size_bytes,
-                        sha256=item.sha256,
+                        size_bytes=size,
+                        sha256=None,
+                        status="too_large",
                     )
+                else:
+                    raw = safe.read_bytes()
+                    try:
+                        raw.decode("utf-8")
+                        status = "ok"
+                    except UnicodeError:
+                        status = "not_utf8"
+                    item = dict(
+                        relative_path=rel,
+                        size_bytes=len(raw),
+                        sha256=digest(raw),
+                        status=status,
+                    )
+            except (MemoryError, OSError):
+                item = dict(
+                    relative_path=rel,
+                    size_bytes=None,
+                    sha256=None,
+                    status="unreadable",
                 )
-                if len(items) > limit:
-                    break
+            items.append(item)
+            if len(items) > limit:
+                break
+        has_more = len(items) > limit
+        page = items[:limit]
         return InboxPage(
-            items[:limit],
-            items[limit - 1]["relative_path"] if len(items) > limit else None,
+            page,
+            page[-1]["relative_path"] if has_more else None,
         )

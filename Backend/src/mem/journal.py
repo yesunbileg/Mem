@@ -31,7 +31,7 @@ def request_fingerprint(patch):
 
 
 def prepare_operation(store, patch):
-    docs = load_documents(store)
+    docs = load_documents(store, tolerate_invalid=True)
     byid = {d.document_id: d for d in docs}
     opid = str(uuid4())
     ids = {}

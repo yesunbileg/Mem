@@ -1,3 +1,4 @@
+import json
 from contextlib import asynccontextmanager
 from functools import wraps
 from pathlib import Path
@@ -50,9 +51,18 @@ def create_server(root: Path) -> FastMCP:
             try:
                 return fn(*args, **kwargs)
             except MemoryError as e:
-                raise ValueError(str(e)) from None
+                raise ValueError(
+                    json.dumps(
+                        {"code": e.code, "message": e.message, "details": e.details},
+                        ensure_ascii=False,
+                    )
+                ) from None
             except OSError:
-                raise ValueError("IO_ERROR: storage operation failed") from None
+                raise ValueError(
+                    json.dumps(
+                        {"code": "IO_ERROR", "message": "Storage operation failed", "details": {}}
+                    )
+                ) from None
 
         return wrapped
 
@@ -64,7 +74,7 @@ def create_server(root: Path) -> FastMCP:
         topic_ids: list[str] | None = None,
         limit: int = 20,
     ) -> SearchPage:
-        """Search L1/L2/L3 literally; follow refs to canonical content. Corrected results include their current conclusion."""
+        """Search L3/L2/L1 literally; follow refs to canonical content. Corrected results include their current conclusion."""
         return search_memory(
             state["store"],
             SearchRequest(query=query, layers=layers, topic_ids=topic_ids, limit=limit),
@@ -105,7 +115,7 @@ def create_server(root: Path) -> FastMCP:
     @server.tool()
     @safe
     def memory_reindex() -> IndexReport:
-        """Rebuild disposable search cache; never recreate or delete L3 history."""
+        """Rebuild disposable search cache; never recreate or delete L1 history."""
         return rebuild_index(state["store"])
 
     @server.tool()

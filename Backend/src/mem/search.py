@@ -45,4 +45,8 @@ def search_memory(store, request):
             )
             if len(items) >= request.limit:
                 break
-        return SearchPage(items=items, index_revision=report.source_revision)
+        return SearchPage(
+            items=items,
+            index_revision=report.source_revision,
+            invalid_sources=report.invalid_sources,
+        )
