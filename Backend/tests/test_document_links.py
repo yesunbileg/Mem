@@ -161,3 +161,27 @@ def test_external_link_target_deletion_does_not_hide_valid_document(store):
     assert l3 not in {
         hit.ref for hit in search_memory(store, SearchRequest(query="Shared")).items
     }
+
+
+def test_source_free_documents_use_schema2_and_topic_is_l2_l3_only(store):
+    patch = linked_patch(reciprocal=False)
+    patch.sources = []
+    for change in patch.documents:
+        change.source_refs = []
+    result = apply_patch(store, patch)
+    l2 = "mem://document/" + result.id_map["new:l2"]
+    l3 = "mem://document/" + result.id_map["new:l3"]
+    raw_l2 = (store.root / "L2/context.md").read_text()
+    raw_l3 = (store.root / "L3/summary.md").read_text()
+    assert "schema_version: 2" in raw_l2
+    assert "schema_version: 2" in raw_l3
+    assert "related_refs:" in raw_l2
+    assert "related_refs:" not in raw_l3
+    assert read_memory(store, l2).data["related_document_refs"] == [l3]
+    assert read_memory(store, l3).data["related_document_refs"] == [l2]
+    topic = read_memory(
+        store, "mem://topic/" + result.id_map["new:topic"]
+    ).data
+    assert set(topic["document_refs"]) == {l2, l3}
+    assert "event_refs" not in topic
+    assert "source_refs" not in read_memory(store, l2).data
