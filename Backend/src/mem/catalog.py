@@ -5,7 +5,6 @@ are derived from authored outgoing links and reverse links in this catalog.
 """
 
 from dataclasses import dataclass, field
-from uuid import UUID
 
 from .documents import DocumentRecord, parse_document
 from .errors import MemoryError
