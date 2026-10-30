@@ -1,7 +1,5 @@
 """Reliability, isolation and pagination regression tests."""
 
-import json
-
 import pytest
 
 from mem.apply import apply_patch
@@ -13,12 +11,11 @@ from mem.inbox import list_inbox, read_inbox
 from mem.models import SearchRequest
 from mem.read import read_memory
 from mem.search import search_memory
-from mem.server import create_server
 
 from .helpers import sample_patch
 
 
-@pytest.mark.parametrize("bad", [b"not a document", b"\\xff", b"x" * (1024 * 1024 + 1)])
+@pytest.mark.parametrize("bad", [b"not a document", bytes([255]), b"x" * (1024 * 1024 + 1)])
 def test_bad_document_does_not_block_valid_memory(store, bad):
     applied = apply_patch(store, sample_patch())
     (store.root / "L2/bad.md").write_bytes(bad)
@@ -34,8 +31,8 @@ def test_bad_document_does_not_block_valid_memory(store, bad):
 def test_tolerant_frontmatter_keeps_original_bytes(store):
     a = apply_patch(store, sample_patch())
     path = store.root / "L1/projects.md"
-    raw = path.read_bytes().replace(b"---\\n", b"---\\ntags: [foo]\\n", 1)
-    raw = b"\\xef\\xbb\\xbf" + raw.replace(b"\\n", b"\\r\\n")
+    raw = path.read_bytes().replace(b"---\n", b"---\ntags: [foo]\n", 1)
+    raw = bytes([239, 187, 191]) + raw.replace(b"\n", b"\r\n")
     path.write_bytes(raw)
     loaded = load_documents(store)
     assert loaded[0].raw == raw
