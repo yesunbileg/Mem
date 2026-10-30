@@ -28,3 +28,30 @@ App нь memory-ийн ач холбогдол/үнэн эсэхийг дан к
 - Бодит `/workspace/Mem`: init → reindex → snapshot → verify амжилттай; source revision 0, documents/events 0, issues байхгүй. Хувийн баримт зохиож seed хийгээгүй.
 - Live DB/cache ignored, `L3/history.snapshot.sqlite3` Git-д track хийхэд бэлэн.
 - Skill guided scenario review: зургаан scenario зөв; baseline дээр topic-based archive rename бодлого байхгүйгээс хуучин нэрийг хадгалж байсныг шинэ reference зассан.
+
+## Independent review ба эцсийн баталгаажуулалт
+
+Тусдаа read-only reviewer зургаан Important асуудал олсон; Critical/Minor үлдсэн finding байгаагүй. Бүгдийг нэг fix pass-д 10 regression test эхлээд унагаж, дараа нь амжилттай болгож зассан:
+
+1. `.mem-` нэртэй хүчинтэй Markdown/Inbox backup-аас орхигдож байсныг зассан.
+2. `L1/./x.md`, `L1//x.md`, file-as-parent collision-ийг PREPARED-ээс өмнө татгалздаг болгосон.
+3. `.md`/`.txt` өөр боловч ижил ZIP stem үүсгэх хоёр эхийг урьдчилан барьдаг болгосон.
+4. Өмнө хэсэгчлэн ашигласан Inbox эхийг дараа нь архивлахад хуучин evidence ref мөн raw archive-аа resolve хийнэ.
+5. Render хийсэн document-ийг canonical parser-аар PREPARED-ээс өмнө шалгана; whitespace-only title санг эвдэхгүй.
+6. Backup creator/restore хоёр DB bytes-ийг багтаасан нийт өгөгдөл, member count, manifest-size хязгаарыг ижил мөрдөнө.
+
+Эцсийн команд: `Backend/.venv/bin/pytest Backend/tests -q --tb=short` → **78 passed, 6.98s**. Ruff lint pass; 39 файлын format check pass; sdist/wheel rebuild pass. Бодит root `mem verify` → ready=true, issues=[], source_revision=0. Reviewer-ийн дараа дахин reviewer ажиллуулаагүй; засваруудыг RED→GREEN болон бүтэн suite-ээр баталсан.
+
+### Хийсэн шийдвэр ба хязгаар
+
+- Хэрэглэгчийн хүсэлтээр тусгаарлагдсан cloud checkout-ийн main дээр ажилласан; local commits хадгалсан, push/PR хийгээгүй.
+- Git-д L3-ийн consistent snapshot орно; live DB/WAL/cache ignored. Git дангаараа raw түүхийн бүтэн backup биш.
+- Cloud skill-ийн helper scripts local executable биш тул task/commit/test ledger-ийг ижил gate-тайгаар гараар хөтөлсөн; бодит command outputs-оор баталгаажуулсан.
+- ZIP баталгаажсаны дараа transient raw DB snapshot-ийг цэвэрлэнэ; архивыг алдвал raw эхийг зөвхөн L3 Git snapshot-оос сэргээхгүй, бүтэн backup хэрэгтэй.
+- Async stdio тест cloud-ийн local socketpair эрх шаардсан тул supported escalation ашигласан; гаднын network bypass хийгээгүй.
+- v0.1 backup нийт data cap 1 GiB, ZIP member cap 100,000, manifest cap 10 MiB. Үүнээс том санг дэмжихэд тусдаа streaming/storage өөрчлөлт шаардлагатай.
+- Windows/macOS, хэрэглэгчийн desktop client дээр хараахан шалгаагүй. Reviewer stdio-г давтан ажиллуулаагүй; controller official SDK client-ээр бүтэн suite-д шалгасан.
+- Power/disk failure, network drive, зэрэг external edit-ийг бүрэн хамгаалах амлалт байхгүй. Agent-ийн семантик сонголтыг backend баталж чадахгүй.
+- Minor finding deferred хийгээгүй.
+
+Environment install/start instructions draft-д хадгалагдсан, install script одоогийн instance дээр амжилттай ажилласан. Draft save нь publish биш; environment settings-д review/save/publish хэрэглэгчийн flow-оор хийгдэнэ.

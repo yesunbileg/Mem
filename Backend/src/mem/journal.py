@@ -2,9 +2,10 @@
 
 import json
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from uuid import uuid4
 
-from .documents import digest, load_documents, now, render_document
+from .documents import digest, load_documents, now, parse_document, render_document
 from .errors import MemoryError
 from .models import ApplyResult
 from .paths import resolve_safe_path
@@ -117,11 +118,25 @@ def prepare_operation(store, patch):
             d.path != previous.path or layer != previous.layer
         ):
             raise MemoryError("CONFLICT", "Use explicit move for path changes")
-        if d.path in paths or (previous and previous.path in paths):
-            raise MemoryError("VALIDATION_ERROR", "Conflicting document paths")
-        paths.add(d.path)
+        touched = {destination}
         if previous:
-            paths.add(previous.path)
+            touched.add(resolve_safe_path(store.root, previous.path, previous.layer))
+        for candidate in touched:
+            for ancestor in candidate.parents:
+                if ancestor == store.root:
+                    break
+                if ancestor.exists() and not ancestor.is_dir():
+                    raise MemoryError("CONFLICT", "Parent path is a file")
+            for other in paths:
+                if (
+                    candidate == other
+                    or candidate.is_relative_to(other)
+                    or other.is_relative_to(candidate)
+                ):
+                    raise MemoryError(
+                        "VALIDATION_ERROR", "Conflicting canonical document paths"
+                    )
+        paths.update(touched)
         if d.action == "create" or (d.action == "move" and d.path != previous.path):
             if destination.exists():
                 raise MemoryError("CONFLICT", "Destination exists")
@@ -132,6 +147,7 @@ def prepare_operation(store, patch):
             raw = render_document(
                 ident, layer, refs(d.topic_refs, "topic", topics), d.title, d.markdown
             )
+        parse_document(raw, d.path, topics)
         before = previous.raw if previous and previous.path == d.path else None
         files.append((d.path, before, raw))
         if d.action == "move" and previous.path != d.path:
@@ -182,13 +198,13 @@ def prepare_operation(store, patch):
         item = _read(store, completion.relative_path, completion.expected_sha256)
         validate_filename(completion.archive_filename, completion.relative_path)
         if (
-            completion.archive_filename.casefold() in archive_names
+            Path(completion.archive_filename).stem.casefold() in archive_names
             or completion.relative_path in closed_paths
         ):
             raise MemoryError(
                 "VALIDATION_ERROR", "Duplicate archive destination/source"
             )
-        archive_names.add(completion.archive_filename.casefold())
+        archive_names.add(Path(completion.archive_filename).stem.casefold())
         closed_paths.add(completion.relative_path)
         done = store.db.execute(
             "SELECT archive_ref FROM processed_sources WHERE sha256=?", (item.sha256,)

@@ -18,6 +18,8 @@ from .recovery import fsync_directory
 from .store import open_store
 
 MAX_BACKUP_BYTES = 1024 * 1024 * 1024
+MAX_BACKUP_MEMBERS = 100000
+MAX_MANIFEST_BYTES = 10 * 1024 * 1024
 
 
 @dataclass
@@ -100,7 +102,7 @@ def _inventory(store):
         for path in sorted((store.root / area).rglob("*")):
             rel = path.relative_to(store.root).as_posix()
             path = resolve_safe_path(store.root, rel, area)
-            if path.is_file() and not path.name.startswith(".mem-"):
+            if path.is_file():
                 result[rel] = digest(path.read_bytes())
     return result
 
@@ -126,7 +128,16 @@ def create_backup(store, destination):
             hashes = {"L3/history.sqlite3": digest(dbfile.read_bytes()), **inventory}
             manifest = BackupManifest(1, source_revision(store), now(), hashes)
             output = stage / "backup.zip"
-            total = 0
+            total = dbfile.stat().st_size
+            if total > MAX_BACKUP_BYTES or len(hashes) + 1 > MAX_BACKUP_MEMBERS:
+                raise MemoryError(
+                    "VALIDATION_ERROR", "Backup exceeds data/member limits"
+                )
+            manifest_bytes = json.dumps(
+                asdict(manifest), ensure_ascii=False, sort_keys=True
+            ).encode("utf-8")
+            if len(manifest_bytes) > MAX_MANIFEST_BYTES:
+                raise MemoryError("VALIDATION_ERROR", "Backup manifest exceeds limit")
             with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as z:
                 z.write(dbfile, "L3/history.sqlite3")
                 for rel, sha in inventory.items():
@@ -141,7 +152,7 @@ def create_backup(store, destination):
                     z.writestr(rel, raw)
                 z.writestr(
                     "manifest.json",
-                    json.dumps(asdict(manifest), ensure_ascii=False, sort_keys=True),
+                    manifest_bytes,
                 )
             if _inventory(store) != inventory:
                 raise MemoryError("CONFLICT", "Source inventory changed during backup")
@@ -193,16 +204,24 @@ def restore_backup(backup_path, destination):
             stage.mkdir()
             infos = z.infolist()
             if (
-                len(infos) > 100000
-                or sum(i.file_size for i in infos) > MAX_BACKUP_BYTES + 10 * 1024 * 1024
+                len(infos) > MAX_BACKUP_MEMBERS
+                or sum(i.file_size for i in infos)
+                > MAX_BACKUP_BYTES + MAX_MANIFEST_BYTES
             ):
                 raise MemoryError(
                     "VALIDATION_ERROR", "Backup exceeds v0.1 restore limits"
                 )
             if len(z.namelist()) != len(set(z.namelist())):
                 raise MemoryError("VALIDATION_ERROR", "Duplicate backup members")
-            if z.getinfo("manifest.json").file_size > 10 * 1024 * 1024:
+            if z.getinfo("manifest.json").file_size > MAX_MANIFEST_BYTES:
                 raise MemoryError("VALIDATION_ERROR", "Manifest too large")
+            if (
+                sum(i.file_size for i in infos if i.filename != "manifest.json")
+                > MAX_BACKUP_BYTES
+            ):
+                raise MemoryError(
+                    "VALIDATION_ERROR", "Backup data exceeds restore limit"
+                )
             manifest = json.loads(z.read("manifest.json"))
             if manifest["schema_version"] != 1:
                 raise MemoryError("SCHEMA_UNSUPPORTED")

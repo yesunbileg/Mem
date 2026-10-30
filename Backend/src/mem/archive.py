@@ -137,8 +137,8 @@ def complete_archives(store, operation_id):
                     (rel, b"", operation_id, source["source_id"]),
                 )
                 store.db.execute(
-                    "UPDATE sources SET archive_ref=? WHERE id=?",
-                    (rel, source["source_id"]),
+                    "UPDATE sources SET archive_ref=? WHERE kind='inbox' AND sha256=?",
+                    (rel, source["sha256"]),
                 )
                 store.db.execute(
                     "INSERT OR IGNORE INTO processed_sources VALUES (?,?)",

@@ -7,6 +7,7 @@ def resolve_safe_path(root: Path, relative_path: str, allowed_area: str) -> Path
     parts = PurePosixPath(relative_path).parts
     if (
         not parts
+        or PurePosixPath(relative_path).as_posix() != relative_path
         or PurePosixPath(relative_path).is_absolute()
         or ".." in parts
         or "\\" in relative_path
