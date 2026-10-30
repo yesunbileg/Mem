@@ -1,0 +1,15 @@
+CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+INSERT INTO metadata VALUES ('source_revision','0');
+CREATE TABLE topics(id TEXT PRIMARY KEY, title TEXT NOT NULL, revision INTEGER NOT NULL);
+CREATE TABLE operations(id TEXT PRIMARY KEY, key TEXT UNIQUE NOT NULL, fingerprint TEXT NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL, result TEXT NOT NULL);
+CREATE TABLE sources(id TEXT PRIMARY KEY, kind TEXT NOT NULL, origin_ref TEXT NOT NULL, excerpt TEXT NOT NULL, sha256 TEXT NOT NULL, archive_ref TEXT);
+CREATE TABLE events(id TEXT PRIMARY KEY, kind TEXT NOT NULL, summary TEXT NOT NULL, details TEXT NOT NULL, occurred_at TEXT, recorded_at TEXT NOT NULL, evidence_kind TEXT NOT NULL, corrects_event_id TEXT UNIQUE REFERENCES events(id), operation_id TEXT REFERENCES operations(id));
+CREATE TABLE event_topics(event_id TEXT REFERENCES events(id), topic_id TEXT REFERENCES topics(id), PRIMARY KEY(event_id,topic_id));
+CREATE TABLE event_sources(event_id TEXT REFERENCES events(id), source_id TEXT REFERENCES sources(id), PRIMARY KEY(event_id,source_id));
+CREATE TABLE document_revisions(id INTEGER PRIMARY KEY, document_id TEXT NOT NULL, before_bytes BLOB, operation_id TEXT REFERENCES operations(id), source_refs TEXT NOT NULL);
+CREATE TABLE operation_documents(operation_id TEXT REFERENCES operations(id), ordinal INTEGER, path TEXT NOT NULL, before_bytes BLOB, after_bytes BLOB, PRIMARY KEY(operation_id,ordinal));
+CREATE TABLE operation_sources(operation_id TEXT REFERENCES operations(id), source_id TEXT NOT NULL, relative_path TEXT NOT NULL, sha256 TEXT NOT NULL, raw BLOB NOT NULL, archive_filename TEXT NOT NULL, outcome TEXT NOT NULL, reason TEXT NOT NULL, archive_ref TEXT, PRIMARY KEY(operation_id,source_id));
+CREATE TABLE processed_sources(sha256 TEXT PRIMARY KEY, archive_ref TEXT NOT NULL);
+CREATE TRIGGER events_no_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT,'immutable event'); END;
+CREATE TRIGGER events_no_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT,'immutable event'); END;
+PRAGMA user_version=1;

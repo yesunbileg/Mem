@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mem-local"
+version = "0.1.0"
+description = "Local source-backed AI memory over MCP"
+requires-python = ">=3.12"
+dependencies = ["mcp>=1.20,<2", "pydantic>=2,<3", "PyYAML>=6,<7", "filelock>=3,<4"]
+
+[project.scripts]
+mem = "mem.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mem"]
