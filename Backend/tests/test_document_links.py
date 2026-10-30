@@ -1,9 +1,9 @@
-from mem.health import get_health
-from mem.documents import load_documents
 import pytest
 
 from mem.apply import apply_patch
+from mem.documents import load_documents
 from mem.errors import MemoryError
+from mem.health import get_health
 from mem.models import MemoryPatch, SearchRequest
 from mem.read import read_memory
 from mem.search import search_memory
