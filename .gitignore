@@ -9,6 +9,8 @@ L0/Inbox/**
 L0/Archive/**/*.zip
 L1/*.sqlite3*
 !L1/history.snapshot.sqlite3
+# Prevent accidental Git publication of pre-migration history databases.
+L3/*.sqlite3*
 
 Backend/dist/
 .ruff_cache/
