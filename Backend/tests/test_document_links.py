@@ -1,3 +1,5 @@
+from mem.health import get_health
+from mem.documents import load_documents
 import pytest
 
 from mem.apply import apply_patch
@@ -60,9 +62,102 @@ def test_bidirectional_l2_l3_links_are_persisted_and_searchable(store):
     }
 
 
-def test_one_way_links_are_rejected_without_writes(store):
-    with pytest.raises(MemoryError, match="VALIDATION_ERROR"):
-        apply_patch(store, linked_patch(reciprocal=False))
+def test_one_way_links_generate_reverse_read_links(store):
+    result = apply_patch(store, linked_patch(reciprocal=False))
+    l2 = "mem://document/" + result.id_map["new:l2"]
+    l3 = "mem://document/" + result.id_map["new:l3"]
+    assert read_memory(store, l2).data["related_document_refs"] == [l3]
+    assert read_memory(store, l3).data["related_document_refs"] == [l2]
+    assert read_memory(store, l3).data["linked_document_refs"] == [l2]
+    assert store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 1
+
+
+@pytest.mark.parametrize("duplicate_name", ["a.md", "zz.md"])
+def test_duplicate_document_id_has_no_canonical_winner(store, duplicate_name):
+    result = apply_patch(store, linked_patch(reciprocal=False))
+    target = "mem://document/" + result.id_map["new:l3"]
+    original = store.root / "L3/summary.md"
+    duplicate = store.root / "L3" / duplicate_name
+    duplicate.write_bytes(original.read_bytes())
+    with pytest.raises(MemoryError, match="INDEX_INVALID"):
+        load_documents(store)
+    with pytest.raises(MemoryError, match="CONFLICT"):
+        read_memory(store, target)
+    with pytest.raises(MemoryError, match="CONFLICT"):
+        apply_patch(
+            store, MemoryPatch(
+                idempotency_key="ambiguous-write",
+                documents=[{
+                    "action": "replace", "ref": target,
+                    "layer": "L3", "topic_refs": [
+                        "mem://topic/" + result.id_map["new:topic"]
+                    ],
+                    "title": "Changed", "path": "L3/summary.md",
+                    "markdown": "Must not write",
+                    "expected_sha256": read_memory(
+                        store, "mem://document/" + result.id_map["new:l2"]
+                    ).source_etag,
+                }],
+            )
+        )
+    report = get_health(store)
+    issues = [i for i in report.issues if i["code"] == "DOCUMENT_ID_AMBIGUOUS"]
+    assert {i["path"] for i in issues} == {
+        "L3/summary.md", "L3/" + duplicate_name
+    }
+    hits = search_memory(store, SearchRequest(query="Shared")).items
+    assert target not in {h.ref for h in hits}
+    assert "mem://document/" + result.id_map["new:l2"] in {h.ref for h in hits}
+    assert original.exists() and duplicate.exists()
+
+
+def test_one_way_relationship_survives_document_move(store):
+    result = apply_patch(store, linked_patch(reciprocal=False))
+    l2 = "mem://document/" + result.id_map["new:l2"]
+    l3 = "mem://document/" + result.id_map["new:l3"]
+    etag = read_memory(store, l3).source_etag
+    apply_patch(store, MemoryPatch(
+        idempotency_key="move-linked",
+        documents=[{
+            "action": "move", "ref": l3, "path": "L3/moved.md",
+            "expected_sha256": etag,
+        }],
+    ))
+    assert read_memory(store, l3).data["path"] == "L3/moved.md"
+    assert read_memory(store, l2).data["related_document_refs"] == [l3]
+    assert read_memory(store, l3).data["related_document_refs"] == [l2]
+
+
+@pytest.mark.parametrize("target", [
+    "mem://event/55555555-5555-4555-8555-555555555555",
+    "mem://archive/55555555-5555-4555-8555-555555555555",
+    "mem://document/55555555-5555-4555-8555-555555555555",
+    "new:l2",
+])
+def test_bad_document_link_rejected_before_prepare(store, target):
+    payload = linked_patch(reciprocal=False).model_dump()
+    payload["documents"][0]["related_refs"] = [target]
+    payload["documents"][0]["linked_document_refs"] = None
+    with pytest.raises(MemoryError):
+        apply_patch(store, MemoryPatch.model_validate(payload))
     assert store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 0
     assert not (store.root / "L2/context.md").exists()
-    assert not (store.root / "L3/summary.md").exists()
+
+
+def test_external_link_target_deletion_does_not_hide_valid_document(store):
+    result = apply_patch(store, linked_patch(reciprocal=False))
+    l2 = "mem://document/" + result.id_map["new:l2"]
+    l3 = "mem://document/" + result.id_map["new:l3"]
+    (store.root / "L3/summary.md").unlink()
+    assert read_memory(store, l2).data["path"] == "L2/context.md"
+    assert read_memory(store, l2).data["related_document_refs"] == []
+    assert any(
+        i["code"] == "DOCUMENT_LINK_DANGLING"
+        for i in get_health(store).issues
+    )
+    assert l2 in {
+        hit.ref for hit in search_memory(store, SearchRequest(query="Shared")).items
+    }
+    assert l3 not in {
+        hit.ref for hit in search_memory(store, SearchRequest(query="Shared")).items
+    }
