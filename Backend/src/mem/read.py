@@ -32,7 +32,7 @@ def read_memory(store, ref):
         kind, ident = split_ref(ref)
         if kind == "document":
             doc = next(
-                (d for d in load_documents(store) if d.document_id == ident), None
+                (d for d in load_documents(store, tolerate_invalid=True) if d.document_id == ident), None
             )
             if not doc:
                 raise MemoryError("NOT_FOUND", "Document not found")
@@ -50,7 +50,7 @@ def read_memory(store, ref):
             data = dict(row)
             data["document_refs"] = [
                 "mem://document/" + d.document_id
-                for d in load_documents(store)
+                for d in load_documents(store, tolerate_invalid=True)
                 if ident in d.topic_ids
             ]
             data["event_refs"] = [
