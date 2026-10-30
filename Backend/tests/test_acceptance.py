@@ -1,6 +1,7 @@
 import hashlib
 
 from mem.apply import apply_patch
+from mem.archive import read_archived_source
 from mem.backup import create_backup, create_snapshot, restore_backup
 from mem.index import rebuild_index
 from mem.models import MemoryPatch, SearchRequest
@@ -60,7 +61,8 @@ def test_full_inbox_memory_correction_backup_restore(store, tmp_path):
     result = apply_patch(store, patch)
     assert result.state == "DONE" and result.archive_status == "complete"
     source = read_memory(store, "mem://source/" + result.id_map["new:s"])
-    assert source.data["text"].encode() == raw
+    assert source.data["archive_ref"] and "text" not in source.data
+    assert read_archived_source(store, source.data["archive_ref"]) == raw
     correction = MemoryPatch(
         idempotency_key="correct-test",
         sources=[
@@ -102,12 +104,11 @@ def test_full_inbox_memory_correction_backup_restore(store, tmp_path):
         chain = read_memory(restored, "mem://event/" + result.id_map["new:e"])
         assert chain.data["effective_event"]["id"] == corrected.id_map["new:e"]
         assert chain.data["original"]["summary"] == "Mem smoke FAIL"
-        assert (
-            read_memory(restored, "mem://source/" + result.id_map["new:s"])
-            .data["text"]
-            .encode()
-            == raw
-        )
+        restored_source = read_memory(
+            restored, "mem://source/" + result.id_map["new:s"]
+        ).data
+        assert "text" not in restored_source
+        assert read_archived_source(restored, restored_source["archive_ref"]) == raw
         assert {
             h.ref for h in search_memory(restored, SearchRequest(query="Mem")).items
         } == before
