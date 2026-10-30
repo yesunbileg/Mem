@@ -5,7 +5,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from .documents import digest, load_documents, now, parse_document, render_document
+from .catalog import load_catalog, validate_document_links
+from .documents import digest, now, parse_document, render_document
 from .errors import MemoryError
 from .models import ApplyResult
 from .paths import resolve_safe_path
@@ -32,8 +33,8 @@ def request_fingerprint(patch):
 
 
 def prepare_operation(store, patch):
-    docs = load_documents(store, tolerate_invalid=True)
-    byid = {d.document_id: d for d in docs}
+    catalog = load_catalog(store)
+    byid = dict(catalog.documents)
     opid = str(uuid4())
     ids = {}
     kinds = {}
@@ -130,6 +131,12 @@ def prepare_operation(store, patch):
         if ident in seen_docs:
             raise MemoryError("VALIDATION_ERROR", "Document changed twice")
         seen_docs.add(ident)
+        if ident in catalog.ambiguous_ids:
+            raise MemoryError(
+                "CONFLICT",
+                "Ambiguous document ID",
+                {"paths": catalog.ambiguous_ids[ident]},
+            )
         previous = byid.get(ident)
         if d.action != "create" and (
             not previous or previous.sha256 != d.expected_sha256
@@ -169,11 +176,15 @@ def prepare_operation(store, patch):
         if d.action == "move":
             raw = previous.raw
         else:
-            if d.linked_document_refs is None:
+            requested_links = (
+                d.related_refs if d.related_refs is not None
+                else d.linked_document_refs
+            )
+            if requested_links is None:
                 linked_ids = previous.linked_document_ids if previous else []
             else:
                 linked_ids = refs(
-                    d.linked_document_refs, "document", known_document_ids
+                    requested_links, "document", known_document_ids
                 )
             raw = render_document(
                 ident,
@@ -196,19 +207,9 @@ def prepare_operation(store, patch):
             )
         )
         etags[ident] = digest(raw)
-    for document in future_documents.values():
-        for target_id in document.linked_document_ids:
-            peer = future_documents.get(target_id)
-            if (
-                peer is None
-                or peer.layer == document.layer
-                or not set(document.topic_ids).intersection(peer.topic_ids)
-                or document.document_id not in peer.linked_document_ids
-            ):
-                raise MemoryError(
-                    "VALIDATION_ERROR",
-                    "L2/L3 links must be reciprocal, cross-layer, and share a topic",
-                )
+    validate_document_links(
+        catalog, list(future_documents.values()), changed_ids=seen_docs
+    )
     events = []
     known_events = {r[0] for r in store.db.execute("SELECT id FROM events")}
     targets = {
