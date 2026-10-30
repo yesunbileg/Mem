@@ -8,24 +8,31 @@ from mem.documents import load_documents
 from mem.errors import MemoryError
 from mem.health import get_health
 from mem.inbox import list_inbox, read_inbox
-from mem.models import SearchRequest
+from mem.models import MemoryPatch, SearchRequest
 from mem.read import read_memory
 from mem.search import search_memory
 
 from .helpers import sample_patch
 
 
-@pytest.mark.parametrize("bad", [b"not a document", bytes([255]), b"x" * (1024 * 1024 + 1)])
+@pytest.mark.parametrize(
+    "bad", [b"not a document", bytes([255]), b"x" * (1024 * 1024 + 1)]
+)
 def test_bad_document_does_not_block_valid_memory(store, bad):
     applied = apply_patch(store, sample_patch())
     (store.root / "L2/bad.md").write_bytes(bad)
     hits = search_memory(store, SearchRequest(query="smoke"))
     assert "L2/bad.md" in hits.invalid_sources
-    assert read_memory(store, "mem://document/" + applied.id_map["new:d"]).data["title"] == "Mem project"
+    assert (
+        read_memory(store, "mem://document/" + applied.id_map["new:d"]).data["title"]
+        == "Mem project"
+    )
     assert get_health(store).ready is False
     with pytest.raises(MemoryError):
         create_backup(store, store.root.parent / "unsafe.zip")
-    assert apply_patch(store, sample_patch(key="second")).state == "DONE"
+    assert (
+        apply_patch(store, MemoryPatch(idempotency_key="second")).state == "DONE"
+    )
 
 
 def test_tolerant_frontmatter_keeps_original_bytes(store):
@@ -37,7 +44,10 @@ def test_tolerant_frontmatter_keeps_original_bytes(store):
     loaded = load_documents(store)
     assert loaded[0].raw == raw
     assert search_memory(store, SearchRequest(query="SQLite")).invalid_sources == []
-    assert read_memory(store, "mem://document/" + a.id_map["new:d"]).source_etag == loaded[0].sha256
+    assert (
+        read_memory(store, "mem://document/" + a.id_map["new:d"]).source_etag
+        == loaded[0].sha256
+    )
 
 
 def test_bad_duplicate_id_isolated(store):
