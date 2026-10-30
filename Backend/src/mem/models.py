@@ -24,6 +24,7 @@ class DocumentChange(Model):
     markdown: str = ""
     expected_sha256: str | None = None
     source_refs: list[str] = Field(default_factory=list)
+    linked_document_refs: list[str] | None = None
 
     @model_validator(mode="after")
     def validate_change(self):
