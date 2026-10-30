@@ -15,6 +15,15 @@
 
 Хоосон `L3`, `L2`, `L0/Inbox` хавтсыг clone хийхэд үүсгэхийн тулд `.gitkeep` тэмдэглэгээ хадгална. `L0/Inbox/.gitkeep` нь reserved техникийн файл, Inbox-ийн эх гэж боловсруулахгүй. Бодит Inbox агуулга Git default-д ignored хэвээр; L3/L2-ийн Markdown файлууд Git-д track хийж болно.
 
+## Түвшний утга
+
+Түвшний дугаар өсөх тусам мэдээлэл улам **шүүгдсэн, товч, ашигтай** болно.
+Энэ нь бага түвшний баримт буруу гэсэн үг биш: L1 нь нотолгоотой түүхийн
+суурь, L2 нь сэдвийн ойлголт, L3 нь хамгийн хэрэгтэй нэг мөрийн баримт юм.
+Файлын байрлал ч үүнд нийцсэн: L1 = SQLite, L2/L3 = Markdown.
+SQLite FTS5 хайлтын индекс аль хэдийн байгаа боловч өнөөгийн хувилбар
+хайлт бүрд Markdown-ийг дахин шалгадаг; incremental catalog одоогоор байхгүй.
+
 ## Суулгах, эхлүүлэх
 
 Python 3.12+, [uv](https://docs.astral.sh/uv/) шаардлагатай. Linux дээр туршсан; Windows/macOS дээр тусад нь баталгаажуулаагүй.
@@ -78,6 +87,27 @@ uv run mem --root .. verify
 ```
 
 `restore-snapshot` байгаа DB-г дарж бичихгүй. Git snapshot нь L1-ийн хувилбар, **бүх сангийн backup биш**: raw Inbox/ZIP нь Git default-д орохгүй.
+
+## Хуучин L1 Markdown / L3 SQLite санг шилжүүлэх
+
+Хуучин бүтэцтэй санг шинэ хувилбар **автоматаар хоосон сан болгон нээхгүй**:
+`SCHEMA_UNSUPPORTED` буцаана. Эхлээд MCP server-ээ унтрааж, шинэ хоосон
+замаар шилжүүлнэ. **Хуучин сан өөрчлөгдөхгүй**, шинэ сан бүрэн шалгагдсаны
+дараа л destination-д нийтлэгдэнэ.
+
+```bash
+cd /absolute/path/Mem/Backend
+uv run mem migrate-layers --source /absolute/old/Mem --destination /absolute/new/Mem
+uv run mem --root /absolute/new/Mem verify
+```
+
+MCP client-ийн `--root` замыг шинэ destination руу шинэчил. Хуучин
+`L1/**/*.md` → шинэ `L3/**/*.md` (frontmatter-ийн `layer` мөн L3),
+`L3/history.sqlite3` → `L1/history.sqlite3`; L2 ба L0 эх өгөгдөл
+хэвээр. Шинэ consistent `L1/history.snapshot.sqlite3` үүсгэнэ.
+Өмнөх `PREPARED/APPLIED` ажиллагаа байвал хуучин хувилбараар recover
+хийхээс нааш шилжүүлэхгүй. Өмнөх backup ZIP-ийг шинэ хувилбараар
+шууд restore хийхийн оронд хуучин хувилбараар сэргээж, дараа нь migrate хий.
 
 ## Бүх санг нөөцлөх, сэргээх
 
