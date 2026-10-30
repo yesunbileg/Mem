@@ -86,6 +86,10 @@ def migrate_legacy_store(source, destination):
         )
     if destination.exists() or destination.is_symlink():
         raise MemoryError("CONFLICT", "Migration destination must not exist")
+    if (source / "L1/history.sqlite3").exists():
+        raise MemoryError("CONFLICT", "Mixed legacy and new store layouts")
+    if (source / "Backend/.state/store.lock").is_symlink():
+        raise MemoryError("VALIDATION_ERROR", "Unsafe legacy lock path")
     old_db = source / "L3/history.sqlite3"
     if not old_db.is_file():
         old_db = source / "L3/history.snapshot.sqlite3"
