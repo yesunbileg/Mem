@@ -64,9 +64,9 @@ def test_event_cannot_be_overwritten_and_destination_not_clobbered(store):
     with pytest.raises(sqlite3.IntegrityError):
         store.db.execute("UPDATE events SET summary='bad'")
     store.db.rollback()
-    target = store.root / "L1/existing.md"
+    target = store.root / "L3/existing.md"
     target.write_bytes(
-        (store.root / "L1/projects.md")
+        (store.root / "L3/projects.md")
         .read_bytes()
         .replace(a.id_map["new:d"].encode(), b"55555555-5555-4555-8555-555555555555")
     )
@@ -77,7 +77,7 @@ def test_event_cannot_be_overwritten_and_destination_not_clobbered(store):
             dict(
                 action="move",
                 ref="mem://document/" + a.id_map["new:d"],
-                path="L1/existing.md",
+                path="L3/existing.md",
                 expected_sha256=a.document_etags[a.id_map["new:d"]],
             )
         ],

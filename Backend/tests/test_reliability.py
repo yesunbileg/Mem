@@ -37,7 +37,7 @@ def test_bad_document_does_not_block_valid_memory(store, bad):
 
 def test_tolerant_frontmatter_keeps_original_bytes(store):
     a = apply_patch(store, sample_patch())
-    path = store.root / "L1/projects.md"
+    path = store.root / "L3/projects.md"
     raw = path.read_bytes().replace(b"---\n", b"---\ntags: [foo]\n", 1)
     raw = bytes([239, 187, 191]) + raw.replace(b"\n", b"\r\n")
     path.write_bytes(raw)
@@ -52,7 +52,7 @@ def test_tolerant_frontmatter_keeps_original_bytes(store):
 
 def test_bad_duplicate_id_isolated(store):
     apply_patch(store, sample_patch())
-    raw = (store.root / "L1/projects.md").read_bytes()
+    raw = (store.root / "L3/projects.md").read_bytes()
     (store.root / "L2/copy.md").write_bytes(raw)
     result = search_memory(store, SearchRequest(query="smoke"))
     assert result.invalid_sources == ["L2/copy.md"]
