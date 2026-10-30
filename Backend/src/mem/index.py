@@ -10,6 +10,7 @@ from .events import event_data, read_event_chain
 from .models import IndexReport
 from .paths import resolve_safe_path
 from .recovery import fsync_directory
+from .shorthand import expand_for_index, get_shorthand
 
 
 def source_revision(store):
@@ -69,6 +70,7 @@ def _build(store, docs):
                 d.markdown,
                 dict(source_etag=d.sha256, record_status="active"),
             )
+        meanings = get_shorthand(store)
         events = store.db.execute("SELECT id FROM events ORDER BY rowid").fetchall()
         for row in events:
             e = event_data(store, row[0])
@@ -79,8 +81,8 @@ def _build(store, docs):
                 "mem://event/" + e["id"],
                 "L1",
                 e["topic_ids"],
-                e["summary"],
-                e["details"],
+                expand_for_index(e["summary"], meanings),
+                expand_for_index(e["details"], meanings),
                 dict(
                     source_etag=digest(json.dumps(e, sort_keys=True).encode()),
                     record_status="corrected"
