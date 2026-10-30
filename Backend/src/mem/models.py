@@ -62,10 +62,32 @@ class SourceDraft(Model):
         return self
 
 
+class ShorthandChange(Model):
+    action: Literal["set", "remove"] = "set"
+    code: str = Field(min_length=1, max_length=80)
+    expansion: str | None = Field(default=None, max_length=2000)
+    expected_expansion: str | None = None
+
+    @model_validator(mode="after")
+    def validate_shorthand(self):
+        if any(char.isspace() for char in self.code):
+            raise ValueError("shorthand code must be a single token")
+        if self.action == "set" and (
+            not self.expansion or not self.expansion.strip()
+        ):
+            raise ValueError("shorthand meaning required")
+        if self.action == "remove" and self.expansion is not None:
+            raise ValueError("remove cannot supply meaning")
+        return self
+
+
 class EventDraft(Model):
     ref: str
     topic_refs: list[str] = Field(min_length=1)
-    kind: Literal["action", "result", "test", "decision", "change", "correction"]
+    kind: Literal[
+        "conversation", "question", "answer", "proposal",
+        "action", "result", "test", "decision", "change", "correction"
+    ]
     summary: str = Field(min_length=1, max_length=2000)
     details: str = ""
     occurred_at: str | None = None
@@ -101,6 +123,7 @@ class MemoryPatch(Model):
     topics: list[TopicChange] = Field(default_factory=list)
     documents: list[DocumentChange] = Field(default_factory=list, max_length=20)
     events: list[EventDraft] = Field(default_factory=list, max_length=100)
+    shorthand: list[ShorthandChange] = Field(default_factory=list, max_length=100)
     sources: list[SourceDraft] = Field(default_factory=list)
     close_inbox: list[InboxCompletion] = Field(default_factory=list)
 
