@@ -42,6 +42,15 @@ class Store:
 def _connect(root, create):
     root = Path(root).resolve()
     dbpath = root / "L1/history.sqlite3"
+    legacy_db = root / "L3/history.sqlite3"
+    legacy_snapshot = root / "L3/history.snapshot.sqlite3"
+    legacy_markdown = (root / "L1").exists() and any((root / "L1").rglob("*.md"))
+    if legacy_db.exists() or legacy_snapshot.exists() or legacy_markdown:
+        raise MemoryError(
+            "SCHEMA_UNSUPPORTED",
+            "Legacy L1 Markdown / L3 SQLite layout detected; run mem migrate-layers",
+            {"source": str(root)},
+        )
     if not create and not dbpath.is_file():
         raise MemoryError("NOT_FOUND", "Store not initialized")
     if not create and dbpath.stat().st_size == 0:
