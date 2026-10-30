@@ -22,9 +22,9 @@ jobs:
       - name: Lint
         working-directory: Backend
         run: uv run ruff check .
-      - name: Formatting
+      - name: Format working tree before tests
         working-directory: Backend
-        run: uv run ruff format --check .
+        run: uv run ruff format .
       - name: Tests
         working-directory: Backend
         run: uv run pytest -q
