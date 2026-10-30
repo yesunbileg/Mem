@@ -7,7 +7,8 @@ Python 3.12+, SQLite FTS5, official MCP Python SDK, Pydantic 2, PyYAML, filelock
 L0 — түүхий эх болон гараар үзэх ZIP архив; L1 — conversation,
 question, answer, proposal, action, result, test, correction-ийн дэлгэрэнгүй
 SQLite түүх; L2 — сэдвийн контекст; L3 — хамгийн чухал товч мэдээлэл.
-L2↔L3 нь нэг сэдэвт, хоёр чиглэлтэй `linked_document_refs`-ээр холбогдоно.
+L2↔L3 нь нэг сэдэвт, баримтад бичсэн `related_refs`-ээс буцах холбоосыг
+автоматаар тооцож, унших/хайлтын `related_document_refs`-ээр харуулна.
 L1 болон эх архивыг Markdown хоорондын холбоос болгон оруулахгүй.
 FTS5 индекс нь тусдаа disposable SQLite cache бөгөөд L1 history DB биш.
 Хуучин layout-ийн `migrate-layers` командыг үндсэн README-д тайлбарласан.
@@ -65,7 +66,7 @@ Git/backup/startup командууд [үндсэн README](../README.md)-д б�
 ## Дэлгэрэнгүй түүх, хоёр талын холбоос, товчлол
 
 - L1-ийн `kind=question|answer|conversation|proposal` нь яриа, асуулт, хариулт, саналыг тус тусад нь хадгална. Зөвхөн гүйцэтгэсэн ажлыг `action/result/test` гэж бүртгэнэ.
-- L2/L3 DocumentChange дээр `linked_document_refs`-ээр эсрэг түвшний document ref-ийг зааж, хоёр баримтыг нэг patch-д харилцан холбоно. Холбоосууд ижил topic-тай байх ёстой. Нэг талын холбоосыг backend няцаана.
+- L2/L3 DocumentChange дээр `related_refs`-ээр эсрэг давхаргын document ref зааж болно. Нөгөө баримт руу давхар бичих шаардлагагүй; уншилт ба хайлт reverse холбоосыг тооцно. Ижил topic шаардана. Давхардсан document ID-д CONFLICT, буруу target-д VALIDATION_ERROR буцаана.
 - `MemoryPatch.shorthand` нь тодорхой нэг prefix-д баригдахгүй. Жишээ: `[{"code":"$scp","expansion":"stage commit push"},{"code":"&","expansion":"and marker"}]`. Товчлолыг өөрчлөх/устгахад `expected_expansion` нь өмнөх утгатай таарах ёстой. Код болон түүний бүтэн тайлбараар L1 хайлт ажиллана.
 
 Эдгээр нь backend-ийн дэмжлэг; орж ирсэн яриаг автоматаар memory болгон хувиргах watcher байхгүй.
