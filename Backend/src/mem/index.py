@@ -5,6 +5,7 @@ import tempfile
 import unicodedata
 from contextlib import closing
 
+from .catalog import load_catalog, related_document_refs
 from .documents import digest, load_documents
 from .events import event_data, read_event_chain
 from .models import IndexReport
@@ -37,6 +38,7 @@ def _path(store):
 
 
 def _build(store, docs):
+    catalog = load_catalog(store)
     path = _path(store)
     fd, temp = tempfile.mkstemp(dir=path.parent, suffix=".sqlite3")
     os.close(fd)
@@ -71,9 +73,9 @@ def _build(store, docs):
                 dict(
                     source_etag=d.sha256,
                     record_status="active",
-                    linked_document_refs=[
-                        "mem://document/" + ident for ident in d.linked_document_ids
-                    ],
+                    linked_document_refs=related_document_refs(
+                        catalog, d.document_id
+                    ),
                 ),
             )
         meanings = get_shorthand(store)
