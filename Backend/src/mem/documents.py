@@ -1,6 +1,6 @@
 import hashlib
 import unicodedata
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -38,10 +38,14 @@ class DocumentRecord:
     markdown: str
     sha256: str
     raw: bytes
+    linked_document_ids: list[str] = field(default_factory=list)
 
     def public(self):
         value = asdict(self)
         value.pop("raw")
+        value["linked_document_refs"] = [
+            "mem://document/" + ident for ident in value.pop("linked_document_ids")
+        ]
         return value
 
 
@@ -88,6 +92,13 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
             or any(str(UUID(t)) not in known_topics for t in topics)
         ):
             raise ValueError("topics")
+        links = meta.get("linked_document_ids", [])
+        if (
+            not isinstance(links, list)
+            or len(set(links)) != len(links)
+            or any(str(UUID(item)) != item for item in links)
+        ):
+            raise ValueError("links")
         if not isinstance(meta["title"], str) or not meta["title"].strip():
             raise ValueError("title")
         updated = meta["updated_at"]
@@ -106,6 +117,7 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
             body,
             digest(raw),
             raw,
+            links,
         )
     except (
         ValueError,
@@ -158,7 +170,7 @@ def load_documents(store, *, tolerate_invalid=False, include_issues=False):
     return docs
 
 
-def render_document(ident, layer, topic_ids, title, body):
+def render_document(ident, layer, topic_ids, title, body, linked_document_ids=None):
     from .sources import reject_credentials
 
     reject_credentials(title + "\n" + body)
@@ -170,6 +182,8 @@ def render_document(ident, layer, topic_ids, title, body):
         title=unicodedata.normalize("NFC", title),
         updated_at=now(),
     )
+    if linked_document_ids:
+        meta["linked_document_ids"] = linked_document_ids
     raw = (
         "---\n"
         + yaml.safe_dump(meta, allow_unicode=True, sort_keys=False)
