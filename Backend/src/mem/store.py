@@ -14,7 +14,6 @@ class Store:
         self.index_path = root / "Backend/.state/search.sqlite3"
         self.mutex = threading.RLock()
         self.schema_version = db.execute("PRAGMA user_version").fetchone()[0]
-        self.schema_version = db.execute("PRAGMA user_version").fetchone()[0]
 
     def close(self):
         self.db.close()
@@ -55,8 +54,6 @@ def _connect(root, create):
         )
     if create and not dbpath.exists() and (root / "L1/history.snapshot.sqlite3").exists():
         raise MemoryError("SCHEMA_UNSUPPORTED", "Existing snapshot requires explicit restore or migration")
-    if create and not dbpath.exists() and (root / "L1/history.snapshot.sqlite3").exists():
-        raise MemoryError("SCHEMA_UNSUPPORTED", "Snapshot requires explicit restore")
     if not create and not dbpath.is_file():
         raise MemoryError("NOT_FOUND", "Store not initialized")
     if not create and dbpath.stat().st_size == 0:
