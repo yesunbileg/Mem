@@ -4,9 +4,12 @@ Python 3.12+, SQLite FTS5, official MCP Python SDK, Pydantic 2, PyYAML, filelock
 
 ## Түвшний семантик
 
-L0 — түүхий эх, боловсруулсны дараах ZIP архив; L1 — батлагдсан
-action/result/test/correction-ийн SQLite түүх; L2 — сэдвийн зорилго,
-шийдвэр, контекст; L3 — нэг мөрийн өндөр ач холбогдолтой баримт.
+L0 — түүхий эх болон гараар үзэх ZIP архив; L1 — conversation,
+question, answer, proposal, action, result, test, correction-ийн дэлгэрэнгүй
+SQLite түүх; L2 — сэдвийн контекст; L3 — хамгийн чухал товч мэдээлэл.
+L2↔L3 нь нэг сэдэвт, баримтад бичсэн `related_refs`-ээс буцах холбоосыг
+автоматаар тооцож, унших/хайлтын `related_document_refs`-ээр харуулна.
+L1 болон эх архивыг Markdown хоорондын холбоос болгон оруулахгүй.
 FTS5 индекс нь тусдаа disposable SQLite cache бөгөөд L1 history DB биш.
 Хуучин layout-ийн `migrate-layers` командыг үндсэн README-д тайлбарласан.
 
@@ -22,7 +25,7 @@ FTS5 индекс нь тусдаа disposable SQLite cache бөгөөд L1 hist
 | `memory_reindex` | canonical эхийг өөрчлөхгүйгээр cache-ийг сэргээнэ |
 | `memory_health` | canonical integrity, cache warning, pending operation |
 
-Literal үгийн AND хайлт хэрэглэнэ; semantic search, Монгол үгийн хувилал/латин галигийг автоматаар тэлэхгүй. Ө/О, Ү/У нь өөр үсэг. Raw Inbox/ZIP болон техникийн document revisions default хайлтад орохгүй. Source ref-ээр архивласан эхийг уншиж болно.
+Literal үгийн AND хайлт хэрэглэнэ; semantic search, Монгол үгийн хувилал/латин галигийг автоматаар тэлэхгүй. Ө/О, Ү/У нь өөр үсэг. Raw Inbox/ZIP болон техникийн document revisions default хайлтад орохгүй. v2-ийн L1 source бүрийн бүтэн UTF-8 эх SQLite-д хадгалагдаж хайлтад орно; source ref нь full_text болон архивын metadata буцаана. ZIP-ийг автоматаар нээхгүй.
 
 ## Patch жишээ
 
@@ -39,7 +42,7 @@ Literal үгийн AND хайлт хэрэглэнэ; semantic search, Монг�
 
 Document `markdown` нь body; frontmatter-ийг backend үүсгэнэ. Replace-д `action=replace`, өмнөх canonical ref, одоогийн `expected_sha256`, бүрэн logical content өгнө. Move-д `action=move`, ref, шинэ path, expected hash өгнө; bytes/ID хэвээр. Topic rename-д expected revision өгнө.
 
-L1 event: `kind=action|result|test|decision|change|correction`, summary/details, topic_refs, source_refs, evidence_kind (`user_reported|tool_observed`), optional occurred_at (timezone-тай, мэдэхгүй бол null). Correction-ийн `corrects_event_id` нь chain-ийн latest event ref. Read нь original/corrections/effective_event буцаана. Search-д хуучин үр дүн таарвал corrected label болон шинэ үр дүн хамт харагдана.
+L1 event: `kind=conversation|question|answer|proposal|note|action|result|test|decision|change|correction`, summary/details, optional topic_refs, required source_refs, optional speaker, evidence_kind (`user_reported|tool_observed`), optional occurred_at (timezone-тай, мэдэхгүй бол null). Correction-ийн `corrects_event_id` нь chain-ийн latest event ref. Read нь original/corrections/effective_event буцаана. Search-д хуучин үр дүн таарвал corrected label болон шинэ үр дүн хамт харагдана.
 
 Inbox source нь `kind=inbox`, relative_path, expected_sha256-тай. Хэсэгчлэн ашиглахад close_inbox өгөхгүй. Бүрэн боловсруулбал:
 
@@ -51,10 +54,27 @@ Inbox source нь `kind=inbox`, relative_path, expected_sha256-тай. Хэсэ�
 
 ## Хязгаар ба алдааны дүрэм
 
-Document 1 MiB, Inbox 10 MiB UTF-8, excerpt 64 KiB, patch 20 documents/100 events/50 MiB материалжсан bytes. Хязгаар давбал эхийг таслахгүй, алдаа өгнө. Source excerpt ба memory body-д илт credential pattern хориглоно; энэ нь бүх secret-ийг таних баталгаа биш. L0 эхийг 1:1 хадгалдаг тул raw текст нууц агуулж болно.
+Document 1 MiB, Inbox 10 MiB UTF-8, source excerpt 10 MiB, patch 20 documents/100 events/50 MiB материалжсан bytes. Хязгаар давбал эхийг таслахгүй, алдаа өгнө. Source excerpt ба memory body-д илт credential pattern хориглоно; энэ нь бүх secret-ийг таних баталгаа биш. L0 эхийг 1:1 хадгалдаг тул raw текст нууц агуулж болно.
 
 `VALIDATION_ERROR`, `NOT_FOUND`, `CONFLICT`, `STORE_BUSY`, `IDEMPOTENCY_CONFLICT`, `SOURCE_ALREADY_PROCESSED`, `RECOVERY_CONFLICT`, `INDEX_INVALID`, `SCHEMA_UNSUPPORTED` нь ялгаатай. CLI алдаанд nonzero exit, MCP tool алдаанд isError өгнө. Үндсэн write APPLIED боловч архив pending бол амжилтгүй шинэ write хийхгүй; яг ижил key/payload-ийг retry хийнэ. Нэг компьютерийн хоёр MCP process зэрэг root нээхэд хоёр дахь нь STORE_BUSY; нэг client-ийн tool calls serialize хийгдэнэ.
 
 `health` cache missing/stale warning-тай ч canonical data healthy бол ready байж болно. PREPARED operation/conflict нь хэвийн read/write-ийг блоклоно. `verify` нь archive checksum ба DB integrity-г гүн шалгана. `recover`-ийг өөрийн writer process-ийг хаасны дараа ажиллуулна.
 
 Git/backup/startup командууд [үндсэн README](../README.md)-д байна. Backend stdout нь serve үед зөвхөн MCP protocol, log stderr. HTTP listener, automatic timer, shell execution, external fetch, Git commit байхгүй.
+
+
+## Дэлгэрэнгүй түүх, хоёр талын холбоос, товчлол
+
+- L1-ийн `kind=question|answer|conversation|proposal` нь яриа, асуулт, хариулт, саналыг тус тусад нь хадгална. Зөвхөн гүйцэтгэсэн ажлыг `action/result/test` гэж бүртгэнэ.
+- L2/L3 DocumentChange дээр `related_refs`-ээр эсрэг давхаргын document ref зааж болно. Нөгөө баримт руу давхар бичих шаардлагагүй; уншилт ба хайлт reverse холбоосыг тооцно. Ижил topic шаардана. Давхардсан document ID-д CONFLICT, буруу target-д VALIDATION_ERROR буцаана.
+- `MemoryPatch.shorthand` нь тодорхой нэг prefix-д баригдахгүй. Жишээ: `[{"code":"$scp","expansion":"stage commit push"},{"code":"&","expansion":"and marker"}]`. Товчлолыг өөрчлөх/устгахад `expected_expansion` нь өмнөх утгатай таарах ёстой. Код болон түүний бүтэн тайлбараар L1 хайлт ажиллана.
+
+Эдгээр нь backend-ийн дэмжлэг; орж ирсэн яриаг автоматаар memory болгон хувиргах watcher байхгүй.
+
+
+Schema v2 нь шинэ L1-ийн бүрэн source text-ийг ZIP-ээс хамааралгүй SQLite-д
+хадгална. Хуучин v1 DB-г автоматаар update хийхгүй; `migrate-v1-db` нь
+эхийг өөрчлөхгүй тусдаа баталгаажсан v2 SQLite хуулбар үүсгэнэ.
+Үүнийг live DB болгох шийдвэр, backing up болон файл солилтыг хэрэглэгч
+тусдаа гүйцэтгэнэ. `read_memory` болон `memory_search` нь v2 эх текстийг
+автоматаар индексэлж чадна, харин Inbox боловсруулах watcher одоогоор байхгүй.

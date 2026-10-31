@@ -5,11 +5,13 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from .documents import digest, load_documents, now, parse_document, render_document
+from .catalog import load_catalog, validate_document_links
+from .documents import digest, now, parse_document, render_document
 from .errors import MemoryError
 from .models import ApplyResult
 from .paths import resolve_safe_path
 from .read import split_ref
+from .shorthand import get_shorthand
 from .sources import capture_source, reject_credentials
 
 
@@ -31,8 +33,8 @@ def request_fingerprint(patch):
 
 
 def prepare_operation(store, patch):
-    docs = load_documents(store, tolerate_invalid=True)
-    byid = {d.document_id: d for d in docs}
+    catalog = load_catalog(store)
+    byid = dict(catalog.documents)
     opid = str(uuid4())
     ids = {}
     kinds = {}
@@ -72,6 +74,26 @@ def prepare_operation(store, patch):
             if not row or row[0] != t.expected_revision:
                 raise MemoryError("CONFLICT", "Topic changed")
         topic_ops.append(dict(id=ident, title=t.title, action=t.action))
+    shorthand = get_shorthand(store)
+    shorthand_ops = []
+    changed_codes = set()
+    for change in patch.shorthand:
+        code = change.code
+        if code in changed_codes:
+            raise MemoryError("VALIDATION_ERROR", "Duplicate shorthand code")
+        changed_codes.add(code)
+        old = shorthand.get(code)
+        if old != change.expected_expansion or (
+            change.action == "remove" and old is None
+        ):
+            raise MemoryError("CONFLICT", "Shorthand meaning changed")
+        reject_credentials(code + "\n" + (change.expansion or ""))
+        if change.action == "set":
+            shorthand[code] = change.expansion
+        else:
+            del shorthand[code]
+        shorthand_ops.append(change.model_dump())
+
     sources = []
     inbox_snapshots = {}
     for draft in patch.sources:
@@ -95,6 +117,10 @@ def prepare_operation(store, patch):
             raise MemoryError("VALIDATION_ERROR", "Unknown or duplicate linked ref")
         return result
 
+    known_document_ids = set(byid) | {
+        ids[d.ref] for d in patch.documents if d.action == "create"
+    }
+    future_documents = dict(byid)
     files = []
     docmeta = []
     etags = {}
@@ -105,6 +131,12 @@ def prepare_operation(store, patch):
         if ident in seen_docs:
             raise MemoryError("VALIDATION_ERROR", "Document changed twice")
         seen_docs.add(ident)
+        if ident in catalog.ambiguous_ids:
+            raise MemoryError(
+                "CONFLICT",
+                "Ambiguous document ID",
+                {"paths": catalog.ambiguous_ids[ident]},
+            )
         previous = byid.get(ident)
         if d.action != "create" and (
             not previous or previous.sha256 != d.expected_sha256
@@ -144,10 +176,33 @@ def prepare_operation(store, patch):
         if d.action == "move":
             raw = previous.raw
         else:
-            raw = render_document(
-                ident, layer, refs(d.topic_refs, "topic", topics), d.title, d.markdown
+            requested_links = (
+                d.related_refs if d.related_refs is not None
+                else d.linked_document_refs
             )
-        parse_document(raw, d.path, topics)
+            if requested_links is None:
+                linked_ids = previous.linked_document_ids if previous else []
+            else:
+                for link_ref in requested_links:
+                    if (
+                        isinstance(link_ref, str)
+                        and link_ref.startswith("mem://document/")
+                        and link_ref[len("mem://document/"):]
+                        in catalog.ambiguous_ids
+                    ):
+                        raise MemoryError("CONFLICT", "Ambiguous linked document ID")
+                linked_ids = refs(
+                    requested_links, "document", known_document_ids
+                )
+            raw = render_document(
+                ident,
+                layer,
+                refs(d.topic_refs, "topic", topics),
+                d.title,
+                d.markdown,
+                linked_document_ids=linked_ids,
+            )
+        future_documents[ident] = parse_document(raw, d.path, topics)
         before = previous.raw if previous and previous.path == d.path else None
         files.append((d.path, before, raw))
         if d.action == "move" and previous.path != d.path:
@@ -160,6 +215,9 @@ def prepare_operation(store, patch):
             )
         )
         etags[ident] = digest(raw)
+    validate_document_links(
+        catalog, list(future_documents.values()), changed_ids=seen_docs
+    )
     events = []
     known_events = {r[0] for r in store.db.execute("SELECT id FROM events")}
     targets = {
@@ -226,6 +284,8 @@ def prepare_operation(store, patch):
         if completion.relative_path in inbox_snapshots:
             _, sid = inbox_snapshots[completion.relative_path]
         else:
+            full_text = item.raw_bytes.decode("utf-8")
+            reject_credentials(full_text)
             sid = str(uuid4())
             ids["inbox:" + completion.relative_path] = sid
             sources.append(
@@ -235,6 +295,7 @@ def prepare_operation(store, patch):
                     origin_ref=completion.relative_path,
                     excerpt="",
                     sha256=item.sha256,
+                    full_text=full_text,
                 )
             )
         linked = any(sid in e["source_ids"] for e in events) or any(
@@ -272,6 +333,7 @@ def prepare_operation(store, patch):
     )
     payload = dict(
         topics=topic_ops,
+        shorthand=shorthand_ops,
         sources=sources,
         events=events,
         documents=docmeta,

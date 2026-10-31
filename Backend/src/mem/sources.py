@@ -13,6 +13,7 @@ class SourceRecord:
     origin_ref: str
     excerpt: str
     sha256: str
+    full_text: str
 
 
 def reject_credentials(text):
@@ -30,6 +31,11 @@ def capture_source(draft, raw_bytes):
     raw = raw_bytes if draft.kind == "inbox" else draft.excerpt.encode()
     if raw is None:
         raise MemoryError("VALIDATION_ERROR", "Missing source bytes")
+    try:
+        full_text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise MemoryError("VALIDATION_ERROR", "Source must be UTF-8 text") from None
+    reject_credentials(full_text)
     return SourceRecord(
-        str(uuid4()), draft.kind, draft.origin_ref, draft.excerpt, digest(raw)
+        str(uuid4()), draft.kind, draft.origin_ref, draft.excerpt, digest(raw), full_text
     )

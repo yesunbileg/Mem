@@ -7,13 +7,14 @@ from contextlib import closing
 from .errors import MemoryError
 from .index import _path, ensure_index_current
 from .models import SearchHit, SearchPage
+from .shorthand import expand_query, get_shorthand
 
 
 def search_memory(store, request):
     with store.mutex:
         report = ensure_index_current(store)
         tokens = re.findall(
-            r"[^\W_]+", unicodedata.normalize("NFC", request.query), re.UNICODE
+            r"[^\W_]+", unicodedata.normalize("NFC", expand_query(request.query, get_shorthand(store))), re.UNICODE
         )
         if not tokens:
             raise MemoryError("VALIDATION_ERROR", "Query needs at least one word")

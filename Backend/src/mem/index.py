@@ -5,11 +5,13 @@ import tempfile
 import unicodedata
 from contextlib import closing
 
+from .catalog import load_catalog, related_document_refs
 from .documents import digest, load_documents
 from .events import event_data, read_event_chain
 from .models import IndexReport
 from .paths import resolve_safe_path
 from .recovery import fsync_directory
+from .shorthand import expand_for_index, get_shorthand
 
 
 def source_revision(store):
@@ -36,6 +38,7 @@ def _path(store):
 
 
 def _build(store, docs):
+    catalog = load_catalog(store)
     path = _path(store)
     fd, temp = tempfile.mkstemp(dir=path.parent, suffix=".sqlite3")
     os.close(fd)
@@ -67,8 +70,31 @@ def _build(store, docs):
                 d.topic_ids,
                 d.title,
                 d.markdown,
-                dict(source_etag=d.sha256, record_status="active"),
+                dict(
+                    source_etag=d.sha256,
+                    record_status="active",
+                    linked_document_refs=related_document_refs(
+                        catalog, d.document_id
+                    ),
+                ),
             )
+        # Self-contained L1 evidence is indexed independently of Inbox/Archive.
+        has_full_text = store.schema_version == 2
+        sources = store.db.execute("SELECT * FROM sources ORDER BY rowid").fetchall()
+        for source in sources:
+            raw_text = source["full_text"] if has_full_text else source["excerpt"]
+            add(
+                "mem://source/" + source["id"],
+                "L1",
+                [],
+                source["origin_ref"],
+                raw_text,
+                dict(
+                    source_etag=source["sha256"],
+                    record_status="active",
+                ),
+            )
+        meanings = get_shorthand(store)
         events = store.db.execute("SELECT id FROM events ORDER BY rowid").fetchall()
         for row in events:
             e = event_data(store, row[0])
@@ -80,7 +106,7 @@ def _build(store, docs):
                 "L1",
                 e["topic_ids"],
                 e["summary"],
-                e["details"],
+                expand_for_index(e["summary"] + "\n" + e["details"], meanings),
                 dict(
                     source_etag=digest(json.dumps(e, sort_keys=True).encode()),
                     record_status="corrected"

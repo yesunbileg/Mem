@@ -80,7 +80,7 @@ def restore_snapshot(snapshot_path, destination):
         with closing(
             sqlite3.connect(snapshot_path.as_uri() + "?mode=ro", uri=True)
         ) as source:
-            if source.execute("PRAGMA user_version").fetchone()[0] != 1:
+            if source.execute("PRAGMA user_version").fetchone()[0] not in (1, 2):
                 raise MemoryError("SCHEMA_UNSUPPORTED")
             if source.execute(
                 "SELECT 1 FROM operations WHERE state!='DONE'"
@@ -126,7 +126,7 @@ def create_backup(store, destination):
             _sqlite_copy(store.db, dbfile)
             inventory = _inventory(store)
             hashes = {"L1/history.sqlite3": digest(dbfile.read_bytes()), **inventory}
-            manifest = BackupManifest(1, source_revision(store), now(), hashes)
+            manifest = BackupManifest(store.schema_version, source_revision(store), now(), hashes)
             output = stage / "backup.zip"
             total = dbfile.stat().st_size
             if total > MAX_BACKUP_BYTES or len(hashes) + 1 > MAX_BACKUP_MEMBERS:
@@ -223,7 +223,7 @@ def restore_backup(backup_path, destination):
                     "VALIDATION_ERROR", "Backup data exceeds restore limit"
                 )
             manifest = json.loads(z.read("manifest.json"))
-            if manifest["schema_version"] != 1:
+            if manifest["schema_version"] not in (1, 2):
                 raise MemoryError("SCHEMA_UNSUPPORTED")
             hashes = manifest["files"]
             if (
@@ -240,6 +240,8 @@ def restore_backup(backup_path, destination):
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(raw)
             with open_store(stage) as restored:
+                if restored.schema_version != manifest["schema_version"]:
+                    raise MemoryError("INTEGRITY_ERROR", "Schema version mismatch")
                 _ready(restored)
                 if source_revision(restored) != manifest["source_revision"]:
                     raise MemoryError("INTEGRITY_ERROR", "Revision mismatch")

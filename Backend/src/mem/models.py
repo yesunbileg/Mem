@@ -24,6 +24,8 @@ class DocumentChange(Model):
     markdown: str = ""
     expected_sha256: str | None = None
     source_refs: list[str] = Field(default_factory=list)
+    linked_document_refs: list[str] | None = None
+    related_refs: list[str] | None = None
 
     @model_validator(mode="after")
     def validate_change(self):
@@ -33,9 +35,10 @@ class DocumentChange(Model):
             not self.title
             or not self.layer
             or not self.topic_refs
-            or not self.source_refs
         ):
             raise ValueError("title, layer, topics and sources required")
+        if self.related_refs is not None and self.linked_document_refs is not None:
+            raise ValueError("choose related_refs or linked_document_refs")
         if len(self.markdown.encode()) > 1024 * 1024:
             raise ValueError("document too large")
         return self
@@ -51,8 +54,8 @@ class SourceDraft(Model):
 
     @model_validator(mode="after")
     def validate_source(self):
-        if len(self.excerpt.encode()) > 65536:
-            raise ValueError("excerpt exceeds 64 KiB")
+        if len(self.excerpt.encode("utf-8")) > 10 * 1024 * 1024:
+            raise ValueError("source text exceeds 10 MiB")
         if self.kind != "inbox" and not self.excerpt.strip():
             raise ValueError("evidence excerpt required")
         if self.kind == "inbox" and (
@@ -62,13 +65,36 @@ class SourceDraft(Model):
         return self
 
 
+class ShorthandChange(Model):
+    action: Literal["set", "remove"] = "set"
+    code: str = Field(min_length=1, max_length=80)
+    expansion: str | None = Field(default=None, max_length=2000)
+    expected_expansion: str | None = None
+
+    @model_validator(mode="after")
+    def validate_shorthand(self):
+        if any(char.isspace() for char in self.code):
+            raise ValueError("shorthand code must be a single token")
+        if self.action == "set" and (
+            not self.expansion or not self.expansion.strip()
+        ):
+            raise ValueError("shorthand meaning required")
+        if self.action == "remove" and self.expansion is not None:
+            raise ValueError("remove cannot supply meaning")
+        return self
+
+
 class EventDraft(Model):
     ref: str
-    topic_refs: list[str] = Field(min_length=1)
-    kind: Literal["action", "result", "test", "decision", "change", "correction"]
+    topic_refs: list[str] = Field(default_factory=list)
+    kind: Literal[
+        "conversation", "question", "answer", "proposal",
+        "note", "action", "result", "test", "decision", "change", "correction"
+    ]
     summary: str = Field(min_length=1, max_length=2000)
     details: str = ""
     occurred_at: str | None = None
+    speaker: str | None = None
     evidence_kind: Literal["user_reported", "tool_observed"]
     source_refs: list[str] = Field(min_length=1)
     corrects_event_id: str | None = None
@@ -101,6 +127,7 @@ class MemoryPatch(Model):
     topics: list[TopicChange] = Field(default_factory=list)
     documents: list[DocumentChange] = Field(default_factory=list, max_length=20)
     events: list[EventDraft] = Field(default_factory=list, max_length=100)
+    shorthand: list[ShorthandChange] = Field(default_factory=list, max_length=100)
     sources: list[SourceDraft] = Field(default_factory=list)
     close_inbox: list[InboxCompletion] = Field(default_factory=list)
 
@@ -155,6 +182,7 @@ class SearchHit(Model):
     latest_correction_ref: str | None = None
     effective_summary: str | None = None
     evidence_kind: str | None = None
+    linked_document_refs: list[str] = Field(default_factory=list)
 
 
 class SearchPage(Model):

@@ -2,7 +2,8 @@ import json
 from dataclasses import asdict
 from uuid import UUID
 
-from .documents import digest, load_documents
+from .catalog import load_catalog, related_document_refs, require_document
+from .documents import digest
 from .errors import MemoryError
 from .events import read_event_chain
 from .models import ReadResult
@@ -31,13 +32,14 @@ def read_memory(store, ref):
         store.ensure_ready()
         kind, ident = split_ref(ref)
         if kind == "document":
-            doc = next(
-                (d for d in load_documents(store, tolerate_invalid=True) if d.document_id == ident), None
-            )
-            if not doc:
-                raise MemoryError("NOT_FOUND", "Document not found")
+            catalog = load_catalog(store)
+            doc = require_document(catalog, ident)
+            data = doc.public()
+            related = related_document_refs(catalog, ident)
+            data["related_document_refs"] = related
+            data["linked_document_refs"] = related
             return ReadResult(
-                ref=ref, kind=kind, data=doc.public(), source_etag=doc.sha256
+                ref=ref, kind=kind, data=data, source_etag=doc.sha256
             )
         if kind == "event":
             data = asdict(read_event_chain(store, ident))
@@ -48,17 +50,12 @@ def read_memory(store, ref):
             if not row:
                 raise MemoryError("NOT_FOUND", "Topic not found")
             data = dict(row)
-            data["document_refs"] = [
+            catalog = load_catalog(store)
+            data["document_refs"] = sorted(
                 "mem://document/" + d.document_id
-                for d in load_documents(store, tolerate_invalid=True)
+                for d in catalog.documents.values()
                 if ident in d.topic_ids
-            ]
-            data["event_refs"] = [
-                "mem://event/" + r[0]
-                for r in store.db.execute(
-                    "SELECT event_id FROM event_topics WHERE topic_id=?", (ident,)
-                )
-            ]
+            )
         else:
             row = store.db.execute(
                 "SELECT * FROM sources WHERE id=?", (ident,)
@@ -66,12 +63,6 @@ def read_memory(store, ref):
             if not row:
                 raise MemoryError("NOT_FOUND", "Source not found")
             data = dict(row)
-            if data["archive_ref"]:
-                from .archive import read_archived_source
-
-                data["text"] = read_archived_source(store, data["archive_ref"]).decode(
-                    "utf-8"
-                )
         return ReadResult(
             ref=ref,
             kind=kind,

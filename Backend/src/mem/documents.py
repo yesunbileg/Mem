@@ -1,13 +1,12 @@
 import hashlib
 import unicodedata
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
 
 import yaml
 
 from .errors import MemoryError
-from .paths import resolve_safe_path
 
 
 class UniqueLoader(yaml.SafeLoader):
@@ -38,10 +37,14 @@ class DocumentRecord:
     markdown: str
     sha256: str
     raw: bytes
+    linked_document_ids: list[str] = field(default_factory=list)
 
     def public(self):
         value = asdict(self)
         value.pop("raw")
+        value["linked_document_refs"] = [
+            "mem://document/" + ident for ident in value.pop("linked_document_ids")
+        ]
         return value
 
 
@@ -76,7 +79,7 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
             "updated_at",
         } <= set(meta):
             raise ValueError("fields")
-        if meta["schema_version"] != 1:
+        if meta["schema_version"] not in (1, 2):
             raise ValueError("schema")
         ident = str(UUID(meta["document_id"]))
         if meta["layer"] not in ("L3", "L2") or path.split("/")[0] != meta["layer"]:
@@ -88,6 +91,26 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
             or any(str(UUID(t)) not in known_topics for t in topics)
         ):
             raise ValueError("topics")
+        if meta["schema_version"] == 2:
+            authored = meta.get("related_refs", [])
+            if not isinstance(authored, list):
+                raise ValueError("links")
+            links = []
+            for ref in authored:
+                if not isinstance(ref, str) or not ref.startswith("mem://document/"):
+                    raise ValueError("link type")
+                target_id = ref[len("mem://document/"):]
+                if str(UUID(target_id)) != target_id:
+                    raise ValueError("link ID")
+                links.append(target_id)
+        else:
+            links = meta.get("linked_document_ids", [])
+        if (
+            not isinstance(links, list)
+            or len(set(links)) != len(links)
+            or any(not isinstance(item, str) or str(UUID(item)) != item for item in links)
+        ):
+            raise ValueError("links")
         if not isinstance(meta["title"], str) or not meta["title"].strip():
             raise ValueError("title")
         updated = meta["updated_at"]
@@ -106,6 +129,7 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
             body,
             digest(raw),
             raw,
+            links,
         )
     except (
         ValueError,
@@ -121,55 +145,38 @@ def parse_document(raw: bytes, path: str, known_topics: set[str]) -> DocumentRec
 
 
 def load_documents(store, *, tolerate_invalid=False, include_issues=False):
-    """Load canonical documents, optionally isolating bad files instead of failing globally.
+    """Compatibility adapter backed by the same duplicate-safe document catalog."""
+    from .catalog import load_catalog
 
-    Invalid files remain untouched on disk. Callers can inspect issues and avoid
-    publishing a backup until those files have been repaired.
-    """
-    known = {r[0] for r in store.db.execute("SELECT id FROM topics")}
-    docs = []
-    seen = set()
-    issues = []
-    for layer in ("L3", "L2"):
-        for path in sorted((store.root / layer).rglob("*.md")):
-            rel = path.relative_to(store.root).as_posix()
-            try:
-                safe = resolve_safe_path(store.root, rel, layer)
-                doc = parse_document(safe.read_bytes(), rel, known)
-                if doc.document_id in seen:
-                    raise MemoryError(
-                        "INDEX_INVALID", "Duplicate document ID", {"path": rel}
-                    )
-                seen.add(doc.document_id)
-                docs.append(doc)
-            except (MemoryError, OSError) as exc:
-                if not tolerate_invalid:
-                    raise
-                issues.append(
-                    dict(
-                        code=getattr(exc, "code", "IO_ERROR"),
-                        severity="error",
-                        path=rel,
-                        message=getattr(exc, "message", "Unable to read document"),
-                    )
-                )
+    catalog = load_catalog(store)
+    if catalog.issues and not tolerate_invalid:
+        raise MemoryError(
+            "INDEX_INVALID",
+            "Invalid canonical document catalog",
+            {"issues": catalog.issues},
+        )
+    documents = sorted(catalog.documents.values(), key=lambda d: d.path)
     if include_issues:
-        return docs, issues
-    return docs
+        return documents, catalog.issues
+    return documents
 
 
-def render_document(ident, layer, topic_ids, title, body):
+def render_document(ident, layer, topic_ids, title, body, linked_document_ids=None):
     from .sources import reject_credentials
 
     reject_credentials(title + "\n" + body)
     meta = dict(
-        schema_version=1,
+        schema_version=2,
         document_id=ident,
         layer=layer,
         topic_ids=topic_ids,
         title=unicodedata.normalize("NFC", title),
         updated_at=now(),
     )
+    if linked_document_ids:
+        meta["related_refs"] = [
+            "mem://document/" + ident for ident in linked_document_ids
+        ]
     raw = (
         "---\n"
         + yaml.safe_dump(meta, allow_unicode=True, sort_keys=False)

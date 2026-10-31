@@ -5,6 +5,7 @@ import hashlib
 import pytest
 
 from mem.apply import apply_patch
+from mem.archive import read_archived_source
 from mem.backup import create_backup, restore_backup
 from mem.errors import MemoryError
 from mem.models import MemoryPatch
@@ -121,7 +122,8 @@ def test_old_partial_inbox_evidence_resolves_after_later_archive(store):
     apply_patch(store, b)
     old_source = read_memory(store, "mem://source/" + first.id_map["new:s"])
     assert old_source.data["archive_ref"] is not None
-    assert old_source.data["text"].encode() == raw
+    assert "text" not in old_source.data
+    assert read_archived_source(store, old_source.data["archive_ref"]) == raw
     assert not (store.root / path).exists()
 
 

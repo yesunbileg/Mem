@@ -1,6 +1,7 @@
 """Level numbering and lossless, offline v0.1 migration regression tests."""
 
 import sqlite3
+from importlib.resources import files
 
 import pytest
 
@@ -13,6 +14,33 @@ from mem.store import init_store, open_store
 
 from .helpers import sample_patch
 from .test_archive import inbox_patch
+
+
+def _make_v1_database(modern_db, old_db):
+    """Build a genuine schema-v1 fixture without silently converting user data."""
+    tables = {
+        "metadata": "key,value",
+        "topics": "id,title,revision",
+        "operations": "id,key,fingerprint,payload,state,result",
+        "sources": "id,kind,origin_ref,excerpt,sha256,archive_ref",
+        "events": "id,kind,summary,details,occurred_at,recorded_at,evidence_kind,corrects_event_id,operation_id",
+        "event_topics": "event_id,topic_id",
+        "event_sources": "event_id,source_id",
+        "document_revisions": "id,document_id,before_bytes,operation_id,source_refs",
+        "operation_documents": "operation_id,ordinal,path,before_bytes,after_bytes",
+        "operation_sources": "operation_id,source_id,relative_path,sha256,raw,archive_filename,outcome,reason,archive_ref",
+        "processed_sources": "sha256,archive_ref",
+    }
+    with sqlite3.connect(old_db) as old:
+        old.executescript(files("mem").joinpath("migrations/001_initial.sql").read_text())
+        old.execute("ATTACH DATABASE ? AS modern", (str(modern_db),))
+        for table, columns in tables.items():
+            action = "INSERT OR REPLACE" if table == "metadata" else "INSERT"
+            old.execute(
+                f"{action} INTO main.{table} ({columns}) SELECT {columns} FROM modern.{table}"
+            )
+        old.commit()
+    old_db.replace(modern_db)
 
 
 def _legacy_root(tmp_path, *, pending=False, snapshot_only=False):
@@ -31,6 +59,7 @@ def _legacy_root(tmp_path, *, pending=False, snapshot_only=False):
     old_document.write_bytes(document.read_bytes().replace(b"layer: L3", b"layer: L1"))
     document.unlink()
     original_db = root / "L1/history.sqlite3"
+    _make_v1_database(original_db, tmp_path / "v1-copy.sqlite3")
     target_db = root / "L3/history.sqlite3"
     original_db.replace(target_db)
     if snapshot_only:
@@ -84,6 +113,7 @@ def test_migrate_legacy_store_preserves_data_and_original(tmp_path, snapshot_onl
         assert {h.ref for h in hits} == {
             "mem://document/" + a.id_map["new:d"],
             "mem://event/" + a.id_map["new:e"],
+            "mem://source/" + a.id_map["new:s"],
         }
         assert store.db.execute("SELECT count(*) FROM events").fetchone()[0] == 1
     with sqlite3.connect(source_db) as db:

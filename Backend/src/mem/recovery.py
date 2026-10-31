@@ -72,33 +72,52 @@ def commit_operation(store, operation):
                     "UPDATE topics SET title=?,revision=revision+1 WHERE id=?",
                     (t["title"], t["id"]),
                 )
-        for s in payload["sources"]:
+        if payload.get("shorthand"):
+            from .shorthand import get_shorthand
+
+            shorthand = get_shorthand(store)
+            for change in payload["shorthand"]:
+                if change["action"] == "set":
+                    shorthand[change["code"]] = change["expansion"]
+                else:
+                    shorthand.pop(change["code"], None)
             store.db.execute(
-                "INSERT INTO sources VALUES (?,?,?,?,?,NULL)",
-                (s["source_id"], s["kind"], s["origin_ref"], s["excerpt"], s["sha256"]),
+                "INSERT INTO metadata(key,value) VALUES('shorthand',?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (json.dumps(shorthand, ensure_ascii=False, sort_keys=True),),
             )
-        for e in payload["events"]:
-            store.db.execute(
-                "INSERT INTO events VALUES (?,?,?,?,?,?,?,?,?)",
-                (
-                    e["id"],
-                    e["kind"],
-                    e["summary"],
-                    e["details"],
-                    e["occurred_at"],
-                    e["recorded_at"],
-                    e["evidence_kind"],
-                    e["corrects_event_id"],
-                    opid,
-                ),
+        for source in payload["sources"]:
+            values = (
+                source["source_id"], source["kind"], source["origin_ref"],
+                source["excerpt"], source["sha256"],
             )
-            store.db.executemany(
-                "INSERT INTO event_topics VALUES (?,?)",
-                [(e["id"], t) for t in e["topic_ids"]],
+            if store.schema_version == 2:
+                store.db.execute(
+                    "INSERT INTO sources VALUES (?,?,?,?,?,NULL,?)",
+                    (*values, source["full_text"]),
+                )
+            else:
+                store.db.execute("INSERT INTO sources VALUES (?,?,?,?,?,NULL)", values)
+        for event in payload["events"]:
+            values = (
+                event["id"], event["kind"], event["summary"], event["details"],
+                event["occurred_at"], event["recorded_at"], event["evidence_kind"],
+                event["corrects_event_id"], opid,
             )
+            if store.schema_version == 2:
+                store.db.execute(
+                    "INSERT INTO events VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (*values, event.get("speaker")),
+                )
+            else:
+                store.db.execute("INSERT INTO events VALUES (?,?,?,?,?,?,?,?,?)", values)
+                store.db.executemany(
+                    "INSERT INTO event_topics VALUES (?,?)",
+                    [(event["id"], t) for t in event["topic_ids"]],
+                )
             store.db.executemany(
                 "INSERT INTO event_sources VALUES (?,?)",
-                [(e["id"], s) for s in e["source_ids"]],
+                [(event["id"], source) for source in event["source_ids"]],
             )
         for d in payload["documents"]:
             before = None

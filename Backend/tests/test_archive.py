@@ -10,6 +10,7 @@ from mem.apply import apply_patch
 from mem.errors import MemoryError
 from mem.inbox import list_inbox, read_inbox
 from mem.models import MemoryPatch
+from mem.read import read_memory
 
 from .helpers import count_events
 
@@ -150,3 +151,13 @@ s=open_store(sys.argv[1]);apply_patch(s,MemoryPatch.model_validate_json(sys.stdi
         assert apply_patch(s, p).state == "DONE"
         assert len(list((root / "L0/Archive").rglob("*.zip"))) == 1
         assert count_events(s) == 0
+
+
+def test_source_read_returns_archive_locator_not_raw_zip_contents(store):
+    patch, raw = inbox_patch(store)
+    result = apply_patch(store, patch)
+    ref = "mem://source/" + result.id_map["inbox:L0/Inbox/chat-001.md"]
+    source = read_memory(store, ref).data
+    assert source["archive_ref"].endswith(".zip")
+    assert "text" not in source
+    assert source["sha256"] == hashlib.sha256(raw).hexdigest()

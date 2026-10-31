@@ -30,13 +30,21 @@ def main():
     migration = subs.add_parser("migrate-layers")
     migration.add_argument("--source", type=Path, required=True)
     migration.add_argument("--destination", type=Path, required=True)
+    schema_migration = subs.add_parser("migrate-v1-db")
+    schema_migration.add_argument("--source", type=Path, required=True)
+    schema_migration.add_argument("--destination", type=Path, required=True)
     rs = subs.add_parser("restore-snapshot")
     rs.add_argument("--snapshot", type=Path, required=True)
     rs.add_argument("--destination", type=Path, required=True)
     args = parser.parse_args()
-    if not args.root and args.command not in ("restore", "restore-snapshot", "migrate-layers"):
+    if not args.root and args.command not in ("restore", "restore-snapshot", "migrate-layers", "migrate-v1-db"):
         parser.error("--root is required")
     try:
+        if args.command == "migrate-v1-db":
+            from .schema_migration import migrate_v1_database
+
+            output(migrate_v1_database(args.source, args.destination))
+            return 0
         if args.command == "migrate-layers":
             from .legacy_migration import migrate_legacy_store
 
