@@ -100,6 +100,23 @@ uv run mem --root .. verify
 
 `restore-snapshot` байгаа DB-г дарж бичихгүй. Git snapshot нь L1-ийн хувилбар, **бүх сангийн backup биш**: raw Inbox/ZIP нь Git default-д орохгүй.
 
+## L1 SQLite schema v1 → v2 (заавал гараар)
+
+Шинэ сан schema v2 үүсгэнэ. Хуучин v1 live DB болон Git snapshot-ийг
+**автоматаар хувиргахгүй**: v1-г уншиж болно, шинэ memory patch бичихгүй.
+MCP процессийг унтрааж, өгөгдлөө тусад нь нөөцөлсний дараа v2 хуулбар үүсгэ:
+
+```bash
+cd /absolute/path/Mem/Backend
+uv run mem migrate-v1-db --source /absolute/path/Mem/L1/history.sqlite3 --destination /absolute/path/Mem/L1/history.v2.sqlite3
+```
+
+Энэ команд эх DB-г өөрчлөхгүй. Үүссэн `history.v2.sqlite3`-ийг шалгаад
+хуучин `history.sqlite3`-ийг тусад нь хадгалж, шинэ файлыг active нэрэнд
+**гараар** солих шаардлагатай. Хуучин архивын бүрэн агуулгаас байхгүй
+L1 мэдээллийг таамгаар сэргээхгүй: хуучин source excerpt хэвээр, шинэ
+ярианы бүрэн эх v2-д хадгалагдана. Хуучин snapshot бас v1 хэвээр.
+
 ## Хуучин L1 Markdown / L3 SQLite санг шилжүүлэх
 
 Хуучин бүтэцтэй санг шинэ хувилбар **автоматаар хоосон сан болгон нээхгүй**:
