@@ -54,8 +54,8 @@ class SourceDraft(Model):
 
     @model_validator(mode="after")
     def validate_source(self):
-        if len(self.excerpt.encode()) > 65536:
-            raise ValueError("excerpt exceeds 64 KiB")
+        if len(self.excerpt.encode("utf-8")) > 10 * 1024 * 1024:
+            raise ValueError("source text exceeds 10 MiB")
         if self.kind != "inbox" and not self.excerpt.strip():
             raise ValueError("evidence excerpt required")
         if self.kind == "inbox" and (
@@ -86,14 +86,15 @@ class ShorthandChange(Model):
 
 class EventDraft(Model):
     ref: str
-    topic_refs: list[str] = Field(min_length=1)
+    topic_refs: list[str] = Field(default_factory=list)
     kind: Literal[
         "conversation", "question", "answer", "proposal",
-        "action", "result", "test", "decision", "change", "correction"
+        "note", "action", "result", "test", "decision", "change", "correction"
     ]
     summary: str = Field(min_length=1, max_length=2000)
     details: str = ""
     occurred_at: str | None = None
+    speaker: str | None = None
     evidence_kind: Literal["user_reported", "tool_observed"]
     source_refs: list[str] = Field(min_length=1)
     corrects_event_id: str | None = None
