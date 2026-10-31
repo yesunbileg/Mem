@@ -24,6 +24,7 @@ def test_rebuild_from_markdown_and_l3(store):
     assert before == {
         "mem://document/" + a.id_map["new:d"],
         "mem://event/" + a.id_map["new:e"],
+        "mem://source/" + a.id_map["new:s"],
     }
     dbhash = store.db.execute("SELECT count(*) FROM events").fetchone()[0]
     store.index_path.unlink()
@@ -93,11 +94,18 @@ def test_invalid_source_isolated_without_hiding_valid_results(store):
 
 def test_filters_and_deleted_document(store):
     a = apply_patch(store, sample_patch())
+    # L1 is a standalone history and no longer stores event-topic links.
     hits = search_memory(
         store,
         SearchRequest(query="smoke", layers=["L1"], topic_ids=[a.id_map["new:t"]]),
     ).items
-    assert len(hits) == 1 and hits[0].layer == "L1"
+    assert hits == []
+    assert any(
+        h.layer == "L1"
+        for h in search_memory(
+            store, SearchRequest(query="smoke", layers=["L1"])
+        ).items
+    )
     (store.root / "L3/projects.md").unlink()
     assert all(
         h.layer == "L1"
