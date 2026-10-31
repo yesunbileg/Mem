@@ -113,6 +113,7 @@ def test_migrate_legacy_store_preserves_data_and_original(tmp_path, snapshot_onl
         assert {h.ref for h in hits} == {
             "mem://document/" + a.id_map["new:d"],
             "mem://event/" + a.id_map["new:e"],
+            "mem://source/" + a.id_map["new:s"],
         }
         assert store.db.execute("SELECT count(*) FROM events").fetchone()[0] == 1
     with sqlite3.connect(source_db) as db:
