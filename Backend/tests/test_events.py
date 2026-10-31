@@ -9,7 +9,7 @@ def test_read_event_includes_corrections(store):
         (CORRECTION, "correction", "Тест FAIL — өмнөх дүн буруу", EVENT),
     ]:
         store.db.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO events(id,kind,summary,details,occurred_at,recorded_at,evidence_kind,corrects_event_id,operation_id) VALUES (?,?,?,?,?,?,?,?,?)",
             (
                 ident,
                 kind,
