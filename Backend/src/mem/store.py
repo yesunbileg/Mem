@@ -13,6 +13,7 @@ class Store:
         self.db_path = root / "L1/history.sqlite3"
         self.index_path = root / "Backend/.state/search.sqlite3"
         self.mutex = threading.RLock()
+        self.schema_version = db.execute("PRAGMA user_version").fetchone()[0]
 
     def close(self):
         self.db.close()
@@ -51,6 +52,8 @@ def _connect(root, create):
             "Legacy L1 Markdown / L3 SQLite layout detected; run mem migrate-layers",
             {"source": str(root)},
         )
+    if create and not dbpath.exists() and (root / "L1/history.snapshot.sqlite3").exists():
+        raise MemoryError("SCHEMA_UNSUPPORTED", "Existing snapshot requires explicit restore or migration")
     if not create and not dbpath.is_file():
         raise MemoryError("NOT_FOUND", "Store not initialized")
     if not create and dbpath.stat().st_size == 0:
@@ -68,12 +71,12 @@ def _connect(root, create):
         db = sqlite3.connect(dbpath, check_same_thread=False)
         db.row_factory = sqlite3.Row
         version = db.execute("PRAGMA user_version").fetchone()[0]
-        if version not in ([0, 1] if create else [1]):
+        if version not in ([0, 1, 2] if create else [1, 2]):
             raise MemoryError("SCHEMA_UNSUPPORTED")
         if version == 0:
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table'").fetchone():
                 raise MemoryError("SCHEMA_UNSUPPORTED")
-            sql = files("mem").joinpath("migrations/001_initial.sql").read_text()
+            sql = files("mem").joinpath("migrations/002_initial.sql").read_text()
             db.executescript("BEGIN;\n" + sql + "\nCOMMIT;")
         db.execute("PRAGMA foreign_keys=ON")
         db.execute("PRAGMA journal_mode=WAL")
