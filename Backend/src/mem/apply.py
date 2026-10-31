@@ -14,6 +14,8 @@ def apply_patch(store, patch):
                 "IDEMPOTENCY_CONFLICT", "Key already used for another request"
             )
         store.ensure_ready()
+        if store.schema_version != 2 and not previous:
+            raise MemoryError("SCHEMA_UNSUPPORTED", "Existing v1 history requires explicit migration")
         if not previous:
             prepared = journal.prepare_operation(store, patch)
             previous = store.db.execute(
