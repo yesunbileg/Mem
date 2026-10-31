@@ -17,7 +17,7 @@ def test_store_reopen_and_init_preserve_data(tmp_path):
     s.close()
     s = init_store(tmp_path / "memory")
     assert s.db.execute("SELECT title FROM topics").fetchone()[0] == "Device"
-    assert s.db.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert s.db.execute("PRAGMA user_version").fetchone()[0] == 2
     s.close()
 
 
@@ -63,6 +63,6 @@ def test_limits_and_unknown_fields():
         ref="new:s", kind="session", origin_ref="session:1", excerpt="a" * 65536
     )
     with pytest.raises(ValueError):
-        SourceDraft(ref="new:s", kind="session", origin_ref="s", excerpt="a" * 65537)
+        SourceDraft(ref="new:s", kind="session", origin_ref="s", excerpt="a" * (10 * 1024 * 1024 + 1))
     with pytest.raises(ValueError):
         MemoryPatch(idempotency_key="k", mystery=True)
