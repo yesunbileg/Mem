@@ -284,6 +284,8 @@ def prepare_operation(store, patch):
         if completion.relative_path in inbox_snapshots:
             _, sid = inbox_snapshots[completion.relative_path]
         else:
+            full_text = item.raw_bytes.decode("utf-8")
+            reject_credentials(full_text)
             sid = str(uuid4())
             ids["inbox:" + completion.relative_path] = sid
             sources.append(
@@ -293,6 +295,7 @@ def prepare_operation(store, patch):
                     origin_ref=completion.relative_path,
                     excerpt="",
                     sha256=item.sha256,
+                    full_text=full_text,
                 )
             )
         linked = any(sid in e["source_ids"] for e in events) or any(
