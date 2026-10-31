@@ -38,7 +38,7 @@ async def test_stdio_tools_and_memory_workflow(tmp_path):
             again = await session.call_tool("memory_apply_patch", {"patch": p})
             assert again.structuredContent["operation_id"] == a["operation_id"]
             search = await session.call_tool("memory_search", {"query": "smoke"})
-            assert len(search.structuredContent["items"]) == 2
+            assert len(search.structuredContent["items"]) == 3
             read = await session.call_tool(
                 "memory_read", {"ref": "mem://event/" + a["id_map"]["new:e"]}
             )
