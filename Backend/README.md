@@ -25,7 +25,7 @@ FTS5 индекс нь тусдаа disposable SQLite cache бөгөөд L1 hist
 | `memory_reindex` | canonical эхийг өөрчлөхгүйгээр cache-ийг сэргээнэ |
 | `memory_health` | canonical integrity, cache warning, pending operation |
 
-Literal үгийн AND хайлт хэрэглэнэ; semantic search, Монгол үгийн хувилал/латин галигийг автоматаар тэлэхгүй. Ө/О, Ү/У нь өөр үсэг. Raw Inbox/ZIP болон техникийн document revisions default хайлтад орохгүй. Source ref нь архивын байрлалын metadata буцаана, ZIP-ийг автоматаар нээхгүй.
+Literal үгийн AND хайлт хэрэглэнэ; semantic search, Монгол үгийн хувилал/латин галигийг автоматаар тэлэхгүй. Ө/О, Ү/У нь өөр үсэг. Raw Inbox/ZIP болон техникийн document revisions default хайлтад орохгүй. v2-ийн L1 source бүрийн бүтэн UTF-8 эх SQLite-д хадгалагдаж хайлтад орно; source ref нь full_text болон архивын metadata буцаана. ZIP-ийг автоматаар нээхгүй.
 
 ## Patch жишээ
 
@@ -42,7 +42,7 @@ Literal үгийн AND хайлт хэрэглэнэ; semantic search, Монг�
 
 Document `markdown` нь body; frontmatter-ийг backend үүсгэнэ. Replace-д `action=replace`, өмнөх canonical ref, одоогийн `expected_sha256`, бүрэн logical content өгнө. Move-д `action=move`, ref, шинэ path, expected hash өгнө; bytes/ID хэвээр. Topic rename-д expected revision өгнө.
 
-L1 event: `kind=action|result|test|decision|change|correction`, summary/details, topic_refs, source_refs, evidence_kind (`user_reported|tool_observed`), optional occurred_at (timezone-тай, мэдэхгүй бол null). Correction-ийн `corrects_event_id` нь chain-ийн latest event ref. Read нь original/corrections/effective_event буцаана. Search-д хуучин үр дүн таарвал corrected label болон шинэ үр дүн хамт харагдана.
+L1 event: `kind=conversation|question|answer|proposal|note|action|result|test|decision|change|correction`, summary/details, optional topic_refs, required source_refs, optional speaker, evidence_kind (`user_reported|tool_observed`), optional occurred_at (timezone-тай, мэдэхгүй бол null). Correction-ийн `corrects_event_id` нь chain-ийн latest event ref. Read нь original/corrections/effective_event буцаана. Search-д хуучин үр дүн таарвал corrected label болон шинэ үр дүн хамт харагдана.
 
 Inbox source нь `kind=inbox`, relative_path, expected_sha256-тай. Хэсэгчлэн ашиглахад close_inbox өгөхгүй. Бүрэн боловсруулбал:
 
@@ -54,7 +54,7 @@ Inbox source нь `kind=inbox`, relative_path, expected_sha256-тай. Хэсэ�
 
 ## Хязгаар ба алдааны дүрэм
 
-Document 1 MiB, Inbox 10 MiB UTF-8, excerpt 64 KiB, patch 20 documents/100 events/50 MiB материалжсан bytes. Хязгаар давбал эхийг таслахгүй, алдаа өгнө. Source excerpt ба memory body-д илт credential pattern хориглоно; энэ нь бүх secret-ийг таних баталгаа биш. L0 эхийг 1:1 хадгалдаг тул raw текст нууц агуулж болно.
+Document 1 MiB, Inbox 10 MiB UTF-8, source excerpt 10 MiB, patch 20 documents/100 events/50 MiB материалжсан bytes. Хязгаар давбал эхийг таслахгүй, алдаа өгнө. Source excerpt ба memory body-д илт credential pattern хориглоно; энэ нь бүх secret-ийг таних баталгаа биш. L0 эхийг 1:1 хадгалдаг тул raw текст нууц агуулж болно.
 
 `VALIDATION_ERROR`, `NOT_FOUND`, `CONFLICT`, `STORE_BUSY`, `IDEMPOTENCY_CONFLICT`, `SOURCE_ALREADY_PROCESSED`, `RECOVERY_CONFLICT`, `INDEX_INVALID`, `SCHEMA_UNSUPPORTED` нь ялгаатай. CLI алдаанд nonzero exit, MCP tool алдаанд isError өгнө. Үндсэн write APPLIED боловч архив pending бол амжилтгүй шинэ write хийхгүй; яг ижил key/payload-ийг retry хийнэ. Нэг компьютерийн хоёр MCP process зэрэг root нээхэд хоёр дахь нь STORE_BUSY; нэг client-ийн tool calls serialize хийгдэнэ.
 
@@ -70,3 +70,11 @@ Git/backup/startup командууд [үндсэн README](../README.md)-д б�
 - `MemoryPatch.shorthand` нь тодорхой нэг prefix-д баригдахгүй. Жишээ: `[{"code":"$scp","expansion":"stage commit push"},{"code":"&","expansion":"and marker"}]`. Товчлолыг өөрчлөх/устгахад `expected_expansion` нь өмнөх утгатай таарах ёстой. Код болон түүний бүтэн тайлбараар L1 хайлт ажиллана.
 
 Эдгээр нь backend-ийн дэмжлэг; орж ирсэн яриаг автоматаар memory болгон хувиргах watcher байхгүй.
+
+
+Schema v2 нь шинэ L1-ийн бүрэн source text-ийг ZIP-ээс хамааралгүй SQLite-д
+хадгална. Хуучин v1 DB-г автоматаар update хийхгүй; `migrate-v1-db` нь
+эхийг өөрчлөхгүй тусдаа баталгаажсан v2 SQLite хуулбар үүсгэнэ.
+Үүнийг live DB болгох шийдвэр, backing up болон файл солилтыг хэрэглэгч
+тусдаа гүйцэтгэнэ. `read_memory` болон `memory_search` нь v2 эх текстийг
+автоматаар индексэлж чадна, харин Inbox боловсруулах watcher одоогоор байхгүй.
