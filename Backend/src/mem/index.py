@@ -78,6 +78,22 @@ def _build(store, docs):
                     ),
                 ),
             )
+        # Self-contained L1 evidence is indexed independently of Inbox/Archive.
+        has_full_text = store.schema_version == 2
+        sources = store.db.execute("SELECT * FROM sources ORDER BY rowid").fetchall()
+        for source in sources:
+            raw_text = source["full_text"] if has_full_text else source["excerpt"]
+            add(
+                "mem://source/" + source["id"],
+                "L1",
+                [],
+                source["origin_ref"],
+                raw_text,
+                dict(
+                    source_etag=source["sha256"],
+                    record_status="active",
+                ),
+            )
         meanings = get_shorthand(store)
         events = store.db.execute("SELECT id FROM events ORDER BY rowid").fetchall()
         for row in events:
